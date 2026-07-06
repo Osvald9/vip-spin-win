@@ -69,12 +69,12 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
       >
         {stripRef.current.map((icon, i) => (
           <div key={i} className="flex items-center justify-center" style={{ height: CELL }}>
-            <SlotIcon name={icon} className="h-20 w-20 text-primary drop-shadow-[0_0_18px_var(--neon)]" />
+            <SlotIcon name={icon} className="h-24 w-24 text-black" />
           </div>
         ))}
       </div>
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-background to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-white" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-white" />
     </div>
   );
 }

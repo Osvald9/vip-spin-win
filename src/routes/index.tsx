@@ -2,18 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import confetti from "canvas-confetti";
-import {
-  Sparkles,
-  Wifi,
-  Gift,
-  Trophy,
-  Zap,
-  ArrowRight,
-  Loader2,
-  Home,
-} from "lucide-react";
+import { Loader2, Trophy, PartyPopper, RotateCcw, Wifi } from "lucide-react";
 
-import { registerParticipant, spinSlot, listActivePrizes } from "@/lib/slot.functions";
+import { registerParticipant, spinSlot } from "@/lib/slot.functions";
 import { SlotReel } from "@/components/slot/SlotReel";
 import { SlotIcon, ICON_KEYS } from "@/components/slot/SlotIcon";
 import { playSpinTicks, playWin, playLose } from "@/lib/slot-sound";
@@ -25,43 +16,37 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Ativação interativa do stand Conexão VIP. Toque, gire e concorra a brindes exclusivos no evento.",
+          "Ativação Conexão VIP: cadastre-se, gire o caça-níquel e concorra a brindes no stand.",
       },
       { property: "og:title", content: "Conexão VIP — Caça-níquel de brindes" },
       {
         property: "og:description",
-        content: "Toque para jogar e concorrer a brindes no stand Conexão VIP.",
+        content: "Cadastre-se e gire o caça-níquel para concorrer a brindes no stand Conexão VIP.",
       },
     ],
   }),
   component: Kiosk,
 });
 
-type Stage = "welcome" | "form" | "slot" | "spinning" | "result" | "thanks";
+type Stage = "form" | "spinning" | "result";
 type SpinResult =
   | { won: true; prize: { id: string; name: string; icon: string }; code: string }
   | { won: false };
 
 function Kiosk() {
-  const [stage, setStage] = useState<Stage>("welcome");
+  const [stage, setStage] = useState<Stage>("form");
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [result, setResult] = useState<SpinResult | null>(null);
-  const [finalIcons, setFinalIcons] = useState<[string, string, string]>(["gift", "wifi", "trophy"]);
+  const [finalIcons, setFinalIcons] = useState<[string, string, string]>([
+    "gift",
+    "wifi",
+    "trophy",
+  ]);
   const [spinning, setSpinning] = useState(false);
   const settleCount = useRef(0);
 
-  // idle reset to welcome after inactivity on thanks screen
-  useEffect(() => {
-    if (stage !== "thanks") return;
-    const t = window.setTimeout(() => {
-      setStage("welcome");
-      setParticipantId(null);
-      setResult(null);
-    }, 25000);
-    return () => clearTimeout(t);
-  }, [stage]);
-
   const spinFn = useServerFn(spinSlot);
+
   const handleSpin = useCallback(
     async (id: string) => {
       setStage("spinning");
@@ -108,32 +93,42 @@ function Kiosk() {
     }
   }, [result]);
 
+  function reset() {
+    setStage("form");
+    setParticipantId(null);
+    setResult(null);
+    setSpinning(false);
+  }
+
+  // Idle reset on result screen
+  useEffect(() => {
+    if (stage !== "result") return;
+    const t = window.setTimeout(reset, 30000);
+    return () => clearTimeout(t);
+  }, [stage]);
+
+  if (stage === "result" && result) {
+    return <ResultScreen result={result} onRestart={reset} />;
+  }
+
   return (
-    <div className="bg-kiosk relative min-h-screen w-full overflow-hidden">
+    <div className="min-h-screen w-full bg-white text-black">
       <TopBar />
-      <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-6 pb-10 pt-24">
-        {stage === "welcome" && <Welcome onStart={() => setStage("form")} />}
-        {stage === "form" && (
-          <RegistrationForm
-            onDone={(id) => {
-              setParticipantId(id);
-              setStage("slot");
-            }}
-          />
-        )}
-        {(stage === "slot" || stage === "spinning") && (
-          <SlotStage
-            spinning={spinning}
-            finalIcons={finalIcons}
-            onReelSettle={onReelSettle}
-            onSpin={() => participantId && handleSpin(participantId)}
-            stage={stage}
-          />
-        )}
-        {stage === "result" && result && (
-          <ResultStage result={result} onContinue={() => setStage("thanks")} />
-        )}
-        {stage === "thanks" && <ThanksStage onRestart={() => setStage("welcome")} />}
+      <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 pb-10 pt-6">
+        <RegistrationForm
+          disabled={stage !== "form" || !!participantId}
+          participantReady={!!participantId}
+          onDone={(id) => setParticipantId(id)}
+        />
+
+        <SlotBoard
+          spinning={spinning}
+          finalIcons={finalIcons}
+          onReelSettle={onReelSettle}
+          canSpin={!!participantId && stage === "form"}
+          isSpinning={stage === "spinning"}
+          onSpin={() => participantId && handleSpin(participantId)}
+        />
       </div>
     </div>
   );
@@ -141,65 +136,36 @@ function Kiosk() {
 
 function TopBar() {
   return (
-    <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 py-5">
-      <div className="flex items-center gap-2">
-        <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-glow">
-          <Wifi className="h-6 w-6 text-primary-foreground" strokeWidth={2.8} />
+    <div className="flex items-center justify-between border-b-4 border-black bg-yellow px-6 py-4">
+      <div className="flex items-center gap-3">
+        <div className="grid h-12 w-12 place-items-center rounded-xl border-4 border-black bg-white">
+          <Wifi className="h-6 w-6 text-black" strokeWidth={3} />
         </div>
         <div className="leading-tight">
-          <div className="font-display text-lg font-black tracking-tight text-foreground">
-            Conexão <span className="text-primary">VIP</span>
+          <div className="font-display text-2xl font-black tracking-tight text-black">
+            Conexão VIP
           </div>
-          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Ativação · Evento
+          <div className="text-[11px] font-bold uppercase tracking-widest text-black">
+            Ativação no evento
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-xs uppercase tracking-widest text-muted-foreground backdrop-blur">
-        <Sparkles className="h-3.5 w-3.5 text-primary" /> Ao vivo
+      <div className="rounded-full border-2 border-black bg-white px-3 py-1 text-xs font-black uppercase tracking-widest text-black">
+        Sorteio ao vivo
       </div>
     </div>
   );
 }
 
-function Welcome({ onStart }: { onStart: () => void }) {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center text-center">
-      <div className="mb-8 flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.3em] text-primary">
-        <Zap className="h-3.5 w-3.5" /> Ativação Conexão VIP
-      </div>
-      <h1 className="text-5xl font-black leading-[0.95] sm:text-6xl">
-        <span className="shimmer-text">Conexão VIP</span>
-        <br />
-        <span className="text-foreground">no evento</span>
-      </h1>
-      <p className="mt-6 max-w-md text-lg font-medium text-muted-foreground">
-        Toque para jogar e concorrer a brindes exclusivos direto no nosso stand.
-      </p>
-
-      <div className="mt-12 flex items-center gap-6 text-primary/70">
-        <SlotIcon name="gift" className="h-10 w-10 animate-pulse" />
-        <SlotIcon name="wifi" className="h-10 w-10 animate-pulse [animation-delay:200ms]" />
-        <SlotIcon name="trophy" className="h-10 w-10 animate-pulse [animation-delay:400ms]" />
-        <SlotIcon name="star" className="h-10 w-10 animate-pulse [animation-delay:600ms]" />
-      </div>
-
-      <button
-        onClick={onStart}
-        className="btn-vip btn-vip-hover glow-pulse mt-14 w-full max-w-md rounded-3xl px-10 py-8 text-2xl"
-      >
-        Toque para jogar
-        <ArrowRight className="ml-3 inline h-7 w-7" />
-      </button>
-
-      <p className="mt-10 text-xs uppercase tracking-widest text-muted-foreground/70">
-        A internet que conecta você aos melhores momentos
-      </p>
-    </div>
-  );
-}
-
-function RegistrationForm({ onDone }: { onDone: (id: string) => void }) {
+function RegistrationForm({
+  onDone,
+  disabled,
+  participantReady,
+}: {
+  onDone: (id: string) => void;
+  disabled: boolean;
+  participantReady: boolean;
+}) {
   const register = useServerFn(registerParticipant);
   const [fullName, setName] = useState("");
   const [whatsapp, setWhats] = useState("");
@@ -231,25 +197,28 @@ function RegistrationForm({ onDone }: { onDone: (id: string) => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-1 flex-col justify-center">
-      <div>
-        <div className="mb-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
-          Passo 1 de 2
-        </div>
-        <h2 className="text-4xl font-black leading-tight">
-          Seu cadastro <span className="shimmer-text">VIP</span>
+    <form
+      onSubmit={submit}
+      className="rounded-2xl border-4 border-black bg-white p-5"
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-2xl font-black uppercase tracking-tight text-black">
+          1. Seu cadastro
         </h2>
-        <p className="mt-2 text-muted-foreground">
-          Preencha para liberar seu giro no caça-níquel.
-        </p>
+        {participantReady && (
+          <span className="rounded-full border-2 border-black bg-yellow px-3 py-1 text-xs font-black uppercase tracking-widest">
+            Pronto para girar
+          </span>
+        )}
       </div>
 
-      <div className="mt-8 space-y-5">
-        <Field label="Nome completo">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Nome completo" className="sm:col-span-2">
           <input
             type="text"
             value={fullName}
             onChange={(e) => setName(e.target.value)}
+            disabled={disabled}
             className="kiosk-input"
             placeholder="Digite seu nome"
             autoComplete="off"
@@ -261,6 +230,7 @@ function RegistrationForm({ onDone }: { onDone: (id: string) => void }) {
             inputMode="tel"
             value={whatsapp}
             onChange={(e) => setWhats(e.target.value)}
+            disabled={disabled}
             className="kiosk-input"
             placeholder="(00) 00000-0000"
             autoComplete="off"
@@ -271,73 +241,84 @@ function RegistrationForm({ onDone }: { onDone: (id: string) => void }) {
             type="text"
             value={city}
             onChange={(e) => setCity(e.target.value)}
+            disabled={disabled}
             className="kiosk-input"
             placeholder="Sua cidade"
             autoComplete="off"
           />
         </Field>
+      </div>
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-card/60 p-4 text-sm">
-          <input
-            type="checkbox"
-            checked={accepted}
-            onChange={(e) => setAccepted(e.target.checked)}
-            className="mt-1 h-6 w-6 accent-[color:var(--neon)]"
-          />
-          <span className="text-muted-foreground">
-            Aceito os termos de participação e o uso dos meus dados para contato promocional
-            da <strong className="text-foreground">Conexão VIP</strong>.
-          </span>
-        </label>
+      <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border-2 border-black bg-white p-3 text-sm">
+        <input
+          type="checkbox"
+          checked={accepted}
+          onChange={(e) => setAccepted(e.target.checked)}
+          disabled={disabled}
+          className="mt-1 h-6 w-6 accent-black"
+        />
+        <span className="text-black">
+          Aceito os termos de participação e o uso dos meus dados para contato promocional
+          da <strong>Conexão VIP</strong>.
+        </span>
+      </label>
 
-        {error && (
-          <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive-foreground">
-            {error}
-          </div>
-        )}
+      {error && (
+        <div className="mt-3 rounded-xl border-2 border-black bg-yellow p-3 text-sm font-bold text-black">
+          {error}
+        </div>
+      )}
 
+      {!participantReady && (
         <button
           type="submit"
-          disabled={loading}
-          className="btn-vip btn-vip-hover w-full rounded-3xl px-8 py-6 text-xl disabled:opacity-60"
+          disabled={loading || disabled}
+          className="btn-yellow btn-yellow-hover mt-4 w-full rounded-2xl py-4 text-lg disabled:opacity-60"
         >
           {loading ? (
             <>
-              <Loader2 className="mr-2 inline h-6 w-6 animate-spin" /> Cadastrando…
+              <Loader2 className="mr-2 inline h-5 w-5 animate-spin" /> Cadastrando…
             </>
           ) : (
-            <>
-              Continuar <ArrowRight className="ml-2 inline h-6 w-6" />
-            </>
+            "Cadastrar e liberar giro"
           )}
         </button>
-      </div>
+      )}
 
       <style>{`
         .kiosk-input {
           width: 100%;
-          background: var(--input);
-          border: 2px solid var(--border);
-          border-radius: 1rem;
-          padding: 1rem 1.25rem;
-          font-size: 1.25rem;
-          color: var(--foreground);
-          transition: border 0.15s, box-shadow 0.15s;
+          background: #fff;
+          border: 3px solid #000;
+          border-radius: 0.75rem;
+          padding: 0.9rem 1rem;
+          font-size: 1.15rem;
+          color: #000;
+          font-weight: 600;
         }
+        .kiosk-input::placeholder { color: #666; font-weight: 500; }
         .kiosk-input:focus {
           outline: none;
-          border-color: var(--neon);
-          box-shadow: 0 0 0 4px color-mix(in oklab, var(--neon) 25%, transparent);
+          box-shadow: 0 0 0 4px var(--yellow);
         }
+        .kiosk-input:disabled { background: #f5f5f5; color: #666; }
       `}</style>
     </form>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div>
-      <div className="mb-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+    <div className={className}>
+      <div className="mb-1 text-xs font-black uppercase tracking-widest text-black">
         {label}
       </div>
       {children}
@@ -345,32 +326,34 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function SlotStage({
+function SlotBoard({
   spinning,
   finalIcons,
   onReelSettle,
+  canSpin,
+  isSpinning,
   onSpin,
-  stage,
 }: {
   spinning: boolean;
   finalIcons: [string, string, string];
   onReelSettle: () => void;
+  canSpin: boolean;
+  isSpinning: boolean;
   onSpin: () => void;
-  stage: Stage;
 }) {
-  const disabled = stage === "spinning";
   return (
-    <div className="flex flex-1 flex-col justify-center">
-      <div className="text-center">
-        <div className="mb-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
-          Passo 2 de 2
-        </div>
-        <h2 className="text-4xl font-black">Gire e ganhe!</h2>
-        <p className="mt-2 text-muted-foreground">Alinhe 3 ícones iguais para levar seu brinde.</p>
+    <div className="rounded-3xl border-4 border-black bg-yellow p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-2xl font-black uppercase tracking-tight text-black">
+          2. Gire e ganhe
+        </h2>
+        <span className="text-xs font-black uppercase tracking-widest text-black">
+          3 iguais = brinde
+        </span>
       </div>
 
-      <div className="mt-10 rounded-[2rem] border-2 border-primary/40 bg-gradient-to-b from-card to-background p-5 shadow-glow">
-        <div className="grid grid-cols-3 gap-3">
+      <div className="rounded-2xl border-4 border-black bg-white p-4">
+        <div className="grid grid-cols-3 gap-4">
           <SlotReel spinning={spinning} finalIcon={finalIcons[0]} delay={0} onSettle={onReelSettle} />
           <SlotReel spinning={spinning} finalIcon={finalIcons[1]} delay={400} onSettle={onReelSettle} />
           <SlotReel spinning={spinning} finalIcon={finalIcons[2]} delay={800} onSettle={onReelSettle} />
@@ -379,124 +362,115 @@ function SlotStage({
 
       <button
         onClick={onSpin}
-        disabled={disabled}
-        className="btn-vip btn-vip-hover glow-pulse mt-10 w-full rounded-3xl py-8 text-3xl disabled:opacity-60"
+        disabled={!canSpin || isSpinning}
+        className="btn-yellow btn-yellow-hover mt-5 w-full rounded-2xl bg-white py-8 text-4xl disabled:opacity-60"
       >
-        {stage === "spinning" ? (
+        {isSpinning ? (
           <>
-            <Loader2 className="mr-2 inline h-8 w-8 animate-spin" /> Girando…
+            <Loader2 className="mr-3 inline h-9 w-9 animate-spin" /> Girando…
           </>
         ) : (
-          <>GIRAR</>
+          "GIRAR"
         )}
       </button>
+
+      {!canSpin && !isSpinning && (
+        <p className="mt-3 text-center text-sm font-bold uppercase tracking-widest text-black">
+          Faça o cadastro acima para liberar o giro
+        </p>
+      )}
     </div>
   );
 }
 
-
-function ResultStage({
+function ResultScreen({
   result,
-  onContinue,
+  onRestart,
 }: {
   result: SpinResult;
-  onContinue: () => void;
+  onRestart: () => void;
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center text-center">
-      {result.won ? (
-        <>
-          <div className="mb-4 flex items-center gap-2 rounded-full border border-[color:var(--gold)]/40 bg-[color:var(--gold)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.3em] text-[color:var(--gold)]">
-            <Trophy className="h-4 w-4" /> Você ganhou!
-          </div>
-          <div className="grid h-32 w-32 place-items-center rounded-3xl bg-gradient-to-br from-primary via-accent to-[color:var(--gold)] shadow-gold">
-            <SlotIcon name={result.prize.icon} className="h-16 w-16 text-primary-foreground" />
-          </div>
-          <h2 className="mt-6 text-4xl font-black leading-tight">
-            Parabéns! Você ganhou
-            <br />
-            <span className="shimmer-text">{result.prize.name}</span>
-          </h2>
-          <p className="mt-3 text-muted-foreground">Um brinde exclusivo Conexão VIP.</p>
+    <div className="min-h-screen w-full bg-white text-black">
+      <TopBar />
+      <div className="mx-auto flex max-w-2xl flex-col items-center px-6 pb-10 pt-10 text-center">
+        {result.won ? (
+          <>
+            <div
+              className="grid h-28 w-28 place-items-center rounded-3xl border-4 border-black bg-yellow"
+              style={{ animation: "bounce-in 0.6s ease" }}
+            >
+              <PartyPopper className="h-14 w-14 text-black" strokeWidth={2.5} />
+            </div>
+            <h1 className="mt-6 text-4xl font-black leading-tight">
+              Parabéns! Você ganhou um<br />
+              <span className="rounded-lg bg-yellow px-2">brinde Conexão VIP</span>
+            </h1>
 
-          <div className="mt-8 w-full rounded-3xl border-2 border-primary/40 bg-card/70 p-5">
-            <div className="text-xs uppercase tracking-widest text-muted-foreground">
-              Seu código de retirada
+            <div className="mt-8 flex w-full items-center gap-4 rounded-2xl border-4 border-black bg-white p-5">
+              <div className="grid h-24 w-24 shrink-0 place-items-center rounded-2xl border-4 border-black bg-yellow">
+                <SlotIcon name={result.prize.icon} className="h-14 w-14 text-black" />
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-black uppercase tracking-widest text-black">
+                  Seu prêmio
+                </div>
+                <div className="mt-1 font-display text-2xl font-black">{result.prize.name}</div>
+              </div>
             </div>
-            <div className="mt-2 font-display text-3xl font-black tracking-widest text-primary text-glow">
-              {result.code}
-            </div>
-            <div className="mt-4 flex justify-center">
-              <img
-                alt="QR Code de retirada"
-                src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(result.code)}&size=200x200&bgcolor=1a1030&color=6ff1ff&margin=2`}
-                className="h-40 w-40 rounded-xl border border-primary/40"
-              />
-            </div>
-            <div className="mt-3 text-sm text-muted-foreground">
-              Apresente este código à nossa equipe no stand.
-            </div>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="mb-4 flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
-            Resultado
-          </div>
-          <div className="grid h-28 w-28 place-items-center rounded-3xl bg-card/70 text-primary/60">
-            <Sparkles className="h-14 w-14" />
-          </div>
-          <h2 className="mt-6 text-3xl font-black leading-tight">
-            Ainda não foi dessa vez,
-            <br />
-            <span className="text-primary">mas obrigado por participar!</span>
-          </h2>
-          <p className="mt-3 max-w-sm text-muted-foreground">
-            Continue acompanhando a Conexão VIP nas nossas redes e no evento.
-          </p>
-        </>
-      )}
 
-      <button
-        onClick={onContinue}
-        className="btn-vip btn-vip-hover mt-10 w-full rounded-3xl py-6 text-xl"
-      >
-        Continuar <ArrowRight className="ml-2 inline h-6 w-6" />
-      </button>
-    </div>
-  );
-}
+            <div className="mt-6 w-full rounded-2xl border-4 border-black bg-yellow p-5">
+              <div className="text-xs font-black uppercase tracking-widest text-black">
+                Código de retirada
+              </div>
+              <div className="mt-1 font-display text-3xl font-black tracking-widest text-black">
+                {result.code}
+              </div>
+              <div className="mt-4 flex justify-center">
+                <img
+                  alt="QR Code de retirada"
+                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(result.code)}&size=220x220&bgcolor=ffffff&color=000000&margin=2`}
+                  className="h-44 w-44 rounded-xl border-4 border-black bg-white"
+                />
+              </div>
+              <div className="mt-3 text-sm font-bold text-black">
+                Apresente este código à nossa equipe no stand.
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid h-28 w-28 place-items-center rounded-3xl border-4 border-black bg-white">
+              <Trophy className="h-14 w-14 text-black" strokeWidth={2.5} />
+            </div>
+            <h1 className="mt-6 text-4xl font-black leading-tight">
+              Ainda não foi dessa vez,<br />
+              <span className="rounded-lg bg-yellow px-2">mas obrigado por participar!</span>
+            </h1>
+            <p className="mt-5 max-w-md text-lg font-bold text-black">
+              Continue acompanhando a Conexão VIP.
+            </p>
+          </>
+        )}
 
-function ThanksStage({ onRestart }: { onRestart: () => void }) {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center text-center">
-      <div className="grid h-24 w-24 place-items-center rounded-3xl bg-gradient-to-br from-primary to-accent shadow-glow">
-        <Gift className="h-12 w-12 text-primary-foreground" />
+        <button
+          onClick={onRestart}
+          className="btn-yellow btn-yellow-hover mt-10 w-full rounded-2xl py-6 text-xl"
+        >
+          <RotateCcw className="mr-2 inline h-6 w-6" /> Nova participação
+        </button>
+
+        <p className="mt-8 text-xs font-bold uppercase tracking-widest text-black">
+          Conexão VIP — a internet que conecta você aos melhores momentos
+        </p>
       </div>
-      <h2 className="mt-6 text-4xl font-black leading-tight">
-        Retire seu prêmio com
-        <br />
-        <span className="shimmer-text">nossa equipe no stand.</span>
-      </h2>
-      <p className="mt-4 text-lg text-muted-foreground">Obrigado por participar!</p>
-      <p className="mt-8 max-w-md text-base font-medium text-foreground/80">
-        <span className="text-primary font-bold">Conexão VIP</span>, a internet que conecta você
-        aos melhores momentos.
-      </p>
-
-      <button
-        onClick={onRestart}
-        className="mt-12 flex items-center gap-2 rounded-full border border-border bg-card/60 px-6 py-3 text-sm uppercase tracking-widest text-muted-foreground"
-      >
-        <Home className="h-4 w-4" /> Voltar ao início
-      </button>
     </div>
   );
 }
 
 function fireConfetti() {
   const end = Date.now() + 1600;
-  const colors = ["#6ff1ff", "#ff5cc8", "#ffd94a", "#ffffff"];
+  const colors = ["#FFD400", "#000000", "#FFFFFF"];
   (function frame() {
     confetti({
       particleCount: 5,
