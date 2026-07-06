@@ -61,33 +61,36 @@ function Kiosk() {
     return () => clearTimeout(t);
   }, [stage]);
 
-  const handleSpin = useCallback(async (spinFn: typeof spinSlot, id: string) => {
-    setStage("spinning");
-    const res = await spinFn({ data: { participantId: id } });
-    if (!res.ok) {
-      setResult({ won: false });
-      setFinalIcons([
-        ICON_KEYS[Math.floor(Math.random() * ICON_KEYS.length)],
-        ICON_KEYS[Math.floor(Math.random() * ICON_KEYS.length)],
-        ICON_KEYS[Math.floor(Math.random() * ICON_KEYS.length)],
-      ] as [string, string, string]);
-    } else if (res.won) {
-      setResult({ won: true, prize: res.prize, code: res.code });
-      setFinalIcons([res.prize.icon, res.prize.icon, res.prize.icon]);
-    } else {
-      setResult({ won: false });
-      // Ensure not 3 equal
-      const pool = ICON_KEYS.filter(Boolean);
-      const a = pool[Math.floor(Math.random() * pool.length)];
-      let b = pool[Math.floor(Math.random() * pool.length)];
-      while (b === a) b = pool[Math.floor(Math.random() * pool.length)];
-      const c = pool[Math.floor(Math.random() * pool.length)];
-      setFinalIcons([a, b, c]);
-    }
-    settleCount.current = 0;
-    setSpinning(true);
-    playSpinTicks(2600);
-  }, []);
+  const spinFn = useServerFn(spinSlot);
+  const handleSpin = useCallback(
+    async (id: string) => {
+      setStage("spinning");
+      const res = await spinFn({ data: { participantId: id } });
+      if (!res.ok) {
+        setResult({ won: false });
+        setFinalIcons([
+          ICON_KEYS[Math.floor(Math.random() * ICON_KEYS.length)],
+          ICON_KEYS[Math.floor(Math.random() * ICON_KEYS.length)],
+          ICON_KEYS[Math.floor(Math.random() * ICON_KEYS.length)],
+        ] as [string, string, string]);
+      } else if (res.won) {
+        setResult({ won: true, prize: res.prize, code: res.code });
+        setFinalIcons([res.prize.icon, res.prize.icon, res.prize.icon]);
+      } else {
+        setResult({ won: false });
+        const pool = ICON_KEYS.filter(Boolean);
+        const a = pool[Math.floor(Math.random() * pool.length)];
+        let b = pool[Math.floor(Math.random() * pool.length)];
+        while (b === a) b = pool[Math.floor(Math.random() * pool.length)];
+        const c = pool[Math.floor(Math.random() * pool.length)];
+        setFinalIcons([a, b, c]);
+      }
+      settleCount.current = 0;
+      setSpinning(true);
+      playSpinTicks(2600);
+    },
+    [spinFn],
+  );
 
   const onReelSettle = useCallback(() => {
     settleCount.current += 1;
@@ -123,9 +126,7 @@ function Kiosk() {
             spinning={spinning}
             finalIcons={finalIcons}
             onReelSettle={onReelSettle}
-            onSpin={() => participantId && handleSpin(useServerFn(spinSlot), participantId)}
-            participantId={participantId}
-            handleSpin={handleSpin}
+            onSpin={() => participantId && handleSpin(participantId)}
             stage={stage}
           />
         )}
