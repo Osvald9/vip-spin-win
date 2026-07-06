@@ -14,7 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      participants: {
+        Row: {
+          accepted_terms: boolean
+          city: string
+          created_at: string
+          full_name: string
+          id: string
+          prize_id: string | null
+          prize_name: string | null
+          redemption_code: string | null
+          whatsapp: string
+          won: boolean
+        }
+        Insert: {
+          accepted_terms?: boolean
+          city: string
+          created_at?: string
+          full_name: string
+          id?: string
+          prize_id?: string | null
+          prize_name?: string | null
+          redemption_code?: string | null
+          whatsapp: string
+          won?: boolean
+        }
+        Update: {
+          accepted_terms?: boolean
+          city?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          prize_id?: string | null
+          prize_name?: string | null
+          redemption_code?: string | null
+          whatsapp?: string
+          won?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participants_prize_id_fkey"
+            columns: ["prize_id"]
+            isOneToOne: false
+            referencedRelation: "prizes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prizes: {
+        Row: {
+          active: boolean
+          created_at: string
+          icon: string
+          id: string
+          name: string
+          remaining_quantity: number
+          total_quantity: number
+          weight: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          icon?: string
+          id?: string
+          name: string
+          remaining_quantity?: number
+          total_quantity?: number
+          weight?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          icon?: string
+          id?: string
+          name?: string
+          remaining_quantity?: number
+          total_quantity?: number
+          weight?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
