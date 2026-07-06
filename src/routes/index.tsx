@@ -349,20 +349,16 @@ function SlotStage({
   spinning,
   finalIcons,
   onReelSettle,
-  participantId,
-  handleSpin,
+  onSpin,
   stage,
 }: {
   spinning: boolean;
   finalIcons: [string, string, string];
   onReelSettle: () => void;
   onSpin: () => void;
-  participantId: string | null;
-  handleSpin: (fn: typeof spinSlot, id: string) => void;
   stage: Stage;
 }) {
-  const spin = useServerFn(spinSlot);
-  const disabled = stage === "spinning" || !participantId;
+  const disabled = stage === "spinning";
   return (
     <div className="flex flex-1 flex-col justify-center">
       <div className="text-center">
@@ -382,7 +378,7 @@ function SlotStage({
       </div>
 
       <button
-        onClick={() => participantId && handleSpin(spin, participantId)}
+        onClick={onSpin}
         disabled={disabled}
         className="btn-vip btn-vip-hover glow-pulse mt-10 w-full rounded-3xl py-8 text-3xl disabled:opacity-60"
       >
@@ -397,6 +393,7 @@ function SlotStage({
     </div>
   );
 }
+
 
 function ResultStage({
   result,
