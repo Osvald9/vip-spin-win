@@ -31,12 +31,20 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
     if (!spinning) return;
     settledRef.current = false;
     
+    // Se o transitionMs já estiver definido (significa que já disparamos a transição desse giro),
+    // apenas atualizamos o ícone final na faixa de ícones sem reiniciar a animação de rolagem.
+    if (transitionMs > 0) {
+      const strip = [...stripRef.current];
+      const finalIndex = strip.length - 2;
+      strip[finalIndex] = finalIcon;
+      stripRef.current = strip;
+      return;
+    }
+
     // reset instantly
     setTransitionMs(0);
     setTargetIndex(0);
 
-    // Spin total duration is much faster: base 1000ms.
-    // The delay between the reels is larger (e.g. 600ms, 1200ms) to create high tension.
     const spinTime = 1000 + delay;
     
     // Replace the strip's final index with the target icon
@@ -59,8 +67,14 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
       cancelAnimationFrame(t);
       clearTimeout(done);
     };
-  }, [spinning, finalIcon, delay, onSettle]);
-
+  }, [spinning, finalIcon, delay, onSettle, transitionMs]);
+  // Reset transition metadata when slot stops spinning
+  useEffect(() => {
+    if (!spinning) {
+      setTransitionMs(0);
+      setTargetIndex(0);
+    }
+  }, [spinning]);
   return (
     <div
       className="reel-window relative overflow-hidden rounded-2xl border-4 border-black bg-white shadow-[inset_0_4px_12px_rgba(0,0,0,0.18)] w-full aspect-square"
