@@ -5,12 +5,12 @@ import {
   Star,
   Sparkles,
   Zap,
-  Shirt,
-  Sticker,
   Coffee,
   Crown,
-  Rocket,
   Award,
+  GlassWater,
+  PenLine,
+  Thermometer,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,12 +21,12 @@ const MAP: Record<string, LucideIcon> = {
   star: Star,
   sparkles: Sparkles,
   zap: Zap,
-  shirt: Shirt,
-  sticker: Sticker,
   coffee: Coffee,
   crown: Crown,
-  rocket: Rocket,
   award: Award,
+  thermos: Thermometer,
+  pen: PenLine,
+  cup: GlassWater,
 };
 
 export const ICON_KEYS = Object.keys(MAP);
