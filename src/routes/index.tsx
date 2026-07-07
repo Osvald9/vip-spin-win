@@ -2,14 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import confetti from "canvas-confetti";
-import { Loader2, Trophy, PartyPopper, RotateCcw, Wifi, Coins, Flame, ArrowLeft } from "lucide-react";
+import { Loader2, Trophy, PartyPopper, RotateCcw, Wifi, Coins, Flame } from "lucide-react";
 
-import { registerParticipant, spinSlot, listActivePrizes, claimMemoryPrize } from "@/lib/slot.functions";
+import { registerParticipant, spinSlot, listActivePrizes } from "@/lib/slot.functions";
 import { SlotReel } from "@/components/slot/SlotReel";
 import { SlotIcon, ICON_KEYS } from "@/components/slot/SlotIcon";
 import { playSpinTicks, playWin, playLose } from "@/lib/slot-sound";
-import { MemoryGame } from "@/components/slot/MemoryGame";
-
 
 const TEST_MODE = false; // Modo de teste desativado — cadastro obrigatório antes de girar
 
@@ -32,14 +30,13 @@ export const Route = createFileRoute("/")({
   component: Kiosk,
 });
 
-type Stage = "form" | "menu" | "slot" | "memory" | "spinning" | "result";
+type Stage = "form" | "spinning" | "result";
 type SpinResult =
   | { won: true; prize: { id: string; name: string; icon: string }; code: string }
   | { won: false };
 
 function Kiosk() {
   const [stage, setStage] = useState<Stage>("form");
-  const [gameMode, setGameMode] = useState<"slot" | "memory">("slot");
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [result, setResult] = useState<SpinResult | null>(null);
   const [finalIcons, setFinalIcons] = useState<[string, string, string]>([
@@ -51,7 +48,6 @@ function Kiosk() {
   const settleCount = useRef(0);
 
   const spinFn = useServerFn(spinSlot);
-  const claimMemoryFn = useServerFn(claimMemoryPrize);
   const prizesFn = useServerFn(listActivePrizes);
   const registerFn = useServerFn(registerParticipant);
   const [testPool, setTestPool] = useState<Array<{ id: string; name: string; icon: string }>>([]);
@@ -179,73 +175,12 @@ function Kiosk() {
     }
   }, [result]);
 
-  const handleMemoryFinish = useCallback(async (won: boolean, selectedLevel: "facil" | "medio" | "dificil") => {
-    let activeId = participantId;
-    if (!activeId) {
-      if (won) {
-        setResult({
-          won: true,
-          prize: { id: "1", name: "Copo Térmico Conexão VIP", icon: "zap" },
-          code: "TESTE-MEM-000000",
-        });
-        playWin();
-        fireConfetti();
-      } else {
-        setResult({ won: false });
-        playLose();
-      }
-      setStage("result");
-      return;
-    }
-
-    try {
-      const res = await claimMemoryFn({
-        data: {
-          participantId: activeId,
-          level: selectedLevel,
-          won,
-        },
-      });
-
-      if (res.ok && res.won) {
-        setResult({ won: true, prize: res.prize, code: res.code });
-        playWin();
-        fireConfetti();
-      } else {
-        setResult({ won: false });
-        playLose();
-      }
-      setStage("result");
-    } catch (err) {
-      alert("Erro ao salvar resultado. Tente novamente.");
-    }
-  }, [participantId, claimMemoryFn]);
-
   function reset() {
     setStage("form");
     setParticipantId(null);
     setResult(null);
     setSpinning(false);
   }
-
-  const backToGames = () => {
-    setStage("menu");
-  };
-
-  const playAgain = () => {
-    setResult(null);
-    if (gameMode === "memory") {
-      setStage("memory");
-    } else {
-      setStage("slot");
-    }
-  };
-
-  const handleQuickPlay = async () => {
-    setParticipantId(null);
-    setGameMode("slot");
-    setStage("menu");
-  };
 
   // Idle reset on result screen
   useEffect(() => {
@@ -255,107 +190,7 @@ function Kiosk() {
   }, [stage]);
 
   if (stage === "result" && result) {
-    return (
-      <ResultScreen
-        result={result}
-        gameMode={gameMode}
-        onRestart={reset}
-        onBackToGames={backToGames}
-        onPlayAgain={playAgain}
-      />
-    );
-  }
-
-  if (stage === "memory") {
-    return (
-      <div className="min-h-screen w-full bg-white text-black">
-        <TopBar />
-        <div className="px-4 pb-16 pt-4">
-          <MemoryGame
-            participantId={participantId}
-            onFinish={handleMemoryFinish}
-            onBackToMenu={backToGames}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (stage === "menu") {
-    return (
-      <div className="min-h-screen w-full bg-white text-black">
-        <TopBar />
-        <div className="mx-auto max-w-4xl px-6 py-10">
-          <div className="text-center mb-10">
-            <div className="text-xs font-black uppercase tracking-[0.3em] text-black">
-              Conexão VIP
-            </div>
-            <h1 className="font-display text-4xl md:text-5xl font-black uppercase tracking-tight text-black mt-2">
-              Escolha seu Jogo
-            </h1>
-            <p className="mt-2 text-sm font-bold text-black/60 uppercase">
-              Selecione uma das opções abaixo para jogar e concorrer a brindes
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            {/* Caça-Níquel */}
-            <button
-              onClick={() => {
-                setGameMode("slot");
-                setStage("slot");
-              }}
-              className="flex flex-col items-center justify-between p-8 rounded-[2rem] border-[6px] border-black bg-[#FFD400] shadow-[8px_8px_0_0_#000] hover:-translate-y-1 hover:shadow-[10px_10px_0_0_#000] transition-all text-center group cursor-pointer"
-            >
-              <div className="my-6">
-                <Coins className="h-16 w-16 text-black group-hover:scale-110 transition-transform" />
-              </div>
-              <div>
-                <h2 className="font-display text-3xl font-black uppercase text-black">
-                  Jackpot VIP
-                </h2>
-                <p className="text-xs font-black uppercase tracking-wider text-black/60 mt-1">
-                  Caça-Níquel
-                </p>
-                <p className="text-sm font-bold text-black/80 mt-4 leading-snug">
-                  Gire a roleta e tente alinhar 3 símbolos iguais para ganhar brindes!
-                </p>
-              </div>
-              <div className="btn-yellow w-full rounded-2xl bg-white py-3 text-lg mt-8 font-black uppercase">
-                Jogar Caça-Níquel
-              </div>
-            </button>
-
-            {/* Jogo da Memória */}
-            <button
-              onClick={() => {
-                setGameMode("memory");
-                setStage("memory");
-              }}
-              className="flex flex-col items-center justify-between p-8 rounded-[2rem] border-[6px] border-black bg-[#FFD400] shadow-[8px_8px_0_0_#000] hover:-translate-y-1 hover:shadow-[10px_10px_0_0_#000] transition-all text-center group cursor-pointer"
-            >
-              <div className="my-6">
-                <Trophy className="h-16 w-16 text-black group-hover:scale-110 transition-transform" />
-              </div>
-              <div>
-                <h2 className="font-display text-3xl font-black uppercase text-black">
-                  Memória Premiada
-                </h2>
-                <p className="text-xs font-black uppercase tracking-wider text-black/60 mt-1">
-                  Jogo da Memória
-                </p>
-                <p className="text-sm font-bold text-black/80 mt-4 leading-snug">
-                  Encontre todos os pares de cartas temáticos antes do tempo acabar!
-                </p>
-              </div>
-              <div className="btn-yellow w-full rounded-2xl bg-white py-3 text-lg mt-8 font-black uppercase">
-                Jogar Memória
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return <ResultScreen result={result} onRestart={reset} />;
   }
 
   return (
@@ -363,36 +198,22 @@ function Kiosk() {
       <TopBar />
 
       <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pb-10 pt-4">
-        {stage === "form" ? (
-          <RegistrationForm
-            disabled={!!participantId}
-            participantReady={!!participantId}
-            onDone={(id) => {
-              setParticipantId(id);
-              setStage("menu");
-            }}
-          />
-        ) : (
-          <div className="flex flex-col gap-4">
-            <button
-              onClick={backToGames}
-              className="flex items-center gap-2 text-black font-black hover:text-black/80 transition-colors uppercase text-sm self-start"
-            >
-              <ArrowLeft className="h-4 w-4" /> Voltar aos Jogos
-            </button>
-            <SlotBoard
-              spinning={spinning}
-              finalIcons={finalIcons}
-              onReelSettle={onReelSettle}
-              canSpin={(TEST_MODE || !!participantId) && stage === "slot"}
-              isSpinning={stage === "spinning"}
-              onSpin={() => handleSpin(participantId)}
-              testMode={TEST_MODE && !participantId}
-            />
-          </div>
-        )}
-      </div>
+        <RegistrationForm
+          disabled={stage !== "form" || !!participantId}
+          participantReady={!!participantId}
+          onDone={(id) => setParticipantId(id)}
+        />
 
+        <SlotBoard
+          spinning={spinning}
+          finalIcons={finalIcons}
+          onReelSettle={onReelSettle}
+          canSpin={(TEST_MODE || !!participantId) && stage === "form"}
+          isSpinning={stage === "spinning"}
+          onSpin={() => handleSpin(participantId)}
+          testMode={TEST_MODE && !participantId}
+        />
+      </div>
       {/* Link invisível para o painel admin no canto inferior direito */}
       <Link
         to="/admin"
@@ -404,10 +225,10 @@ function Kiosk() {
       {/* Botão invisível para giro rápido sem cadastro no canto inferior esquerdo */}
       {stage === "form" && (
         <button
-          onClick={handleQuickPlay}
+          onClick={() => handleSpin(null)}
           className="fixed bottom-0 left-0 w-16 h-16 z-50 cursor-default bg-transparent focus:outline-none"
           style={{ opacity: 0.01 }}
-          title="Jogar sem cadastro"
+          title="Girar sem cadastro"
         />
       )}
     </div>
@@ -666,19 +487,11 @@ function SlotBoard({
 
 function ResultScreen({
   result,
-  gameMode = "slot",
   onRestart,
-  onBackToGames,
-  onPlayAgain,
 }: {
   result: SpinResult;
-  gameMode?: "slot" | "memory";
   onRestart: () => void;
-  onBackToGames?: () => void;
-  onPlayAgain?: () => void;
 }) {
-  const isMemory = gameMode === "memory";
-
   return (
     <div className="min-h-screen w-full bg-white text-black">
       <TopBar />
@@ -691,19 +504,13 @@ function ResultScreen({
             >
               <PartyPopper className="h-14 w-14 text-black" strokeWidth={2.5} />
             </div>
-            <h1 className="mt-6 text-4xl font-black leading-tight uppercase">
+            <h1 className="mt-6 text-4xl font-black leading-tight">
               Parabéns!
               <br />
-              {isMemory ? (
-                "Você concluiu o desafio!"
-              ) : (
-                <>
-                  Você ganhou{" "}
-                  <span className="rounded-lg bg-yellow px-2 inline-block mt-2">
-                    {result.prize.name}
-                  </span>
-                </>
-              )}
+              Você ganhou{" "}
+              <span className="rounded-lg bg-yellow px-2 inline-block mt-2">
+                {result.prize.name}
+              </span>
             </h1>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-4 rounded-3xl border-4 border-black bg-yellow p-8 w-full">
@@ -715,7 +522,7 @@ function ResultScreen({
                   {result.prize.name}
                 </div>
                 <p className="mt-4 text-sm font-bold text-black/80">
-                  {isMemory ? "Procure nossa equipe para retirar." : "Retire o seu brinde com a nossa equipe no stand!"}
+                  Retire o seu brinde com a nossa equipe no stand!
                 </p>
               </div>
             </div>
@@ -725,47 +532,23 @@ function ResultScreen({
             <div className="grid h-28 w-28 place-items-center rounded-3xl border-4 border-black bg-white">
               <Trophy className="h-14 w-14 text-black" strokeWidth={2.5} />
             </div>
-            <h1 className="mt-6 text-4xl font-black leading-tight uppercase">
-              {isMemory ? (
-                "O tempo acabou!"
-              ) : (
-                <>
-                  Ainda não foi dessa vez,<br />
-                  <span className="rounded-lg bg-yellow px-2">mas obrigado por participar!</span>
-                </>
-              )}
+            <h1 className="mt-6 text-4xl font-black leading-tight">
+              Ainda não foi dessa vez,<br />
+              <span className="rounded-lg bg-yellow px-2">mas obrigado por participar!</span>
             </h1>
             <p className="mt-5 max-w-md text-lg font-bold text-black">
-              {isMemory
-                ? "Não foi dessa vez, mas você ainda pode conhecer os planos da Conexão VIP no stand."
-                : "Continue acompanhando a Conexão VIP."}
+              Continue acompanhando a Conexão VIP.
             </p>
           </>
         )}
 
-        {isMemory ? (
-          <div className="flex flex-col sm:flex-row gap-4 mt-10 w-full">
-            <button
-              onClick={onPlayAgain}
-              className="btn-yellow btn-yellow-hover flex-1 rounded-2xl py-6 text-xl cursor-pointer"
-            >
-              <RotateCcw className="mr-2 inline h-6 w-6" /> Jogar Novamente
-            </button>
-            <button
-              onClick={onBackToGames}
-              className="flex-1 rounded-2xl border-4 border-black bg-white text-black font-black uppercase tracking-wider py-6 text-xl hover:bg-zinc-50 transition-all cursor-pointer shadow-[4px_4px_0_0_#000] hover:-translate-y-0.5 active:translate-y-0"
-            >
-              Voltar para os Games
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={onRestart}
-            className="btn-yellow btn-yellow-hover mt-10 w-full rounded-2xl py-6 text-xl cursor-pointer"
-          >
-            <RotateCcw className="mr-2 inline h-6 w-6" /> Nova participação
-          </button>
-        )}
+        <button
+          onClick={onRestart}
+          className="btn-yellow btn-yellow-hover mt-10 w-full rounded-2xl py-6 text-xl"
+        >
+          <RotateCcw className="mr-2 inline h-6 w-6" /> Nova participação
+        </button>
+
       </div>
     </div>
   );
