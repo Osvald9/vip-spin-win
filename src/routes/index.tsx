@@ -102,54 +102,60 @@ function Kiosk() {
     async (id: string | null) => {
       let activeId = id;
       setStage("spinning");
+      settleCount.current = 0;
+      
+      // Inicia a animação de giro visual IMEDIATAMENTE na tela
+      setSpinning(true);
+      playSpinTicks(2600);
 
-      if (!activeId) {
-        // Criar participante de teste para persistir o giro e diminuir o estoque no banco
-        try {
+      // Enquanto o motor gira visualmente, fazemos a chamada ao servidor em segundo plano
+      try {
+        if (!activeId) {
+          // Criar participante de teste/rápido para persistir o giro e diminuir o estoque no banco
           const tempRes = await registerFn({
             data: {
-              full_name: "Giro de Teste",
-              whatsapp: "teste-" + Math.random().toString(36).substring(2, 11),
-              city: "Modo Teste",
+              full_name: "Giro Rápido",
+              whatsapp: "rapido-" + Math.random().toString(36).substring(2, 11),
+              city: "Totem",
               accepted_terms: true,
             },
           });
           if (tempRes.ok) {
             activeId = tempRes.participantId;
           } else {
+            // Em caso de falha de conexão no registro, simula giro local
             runTestSpin();
             return;
           }
-        } catch {
-          runTestSpin();
+        }
+
+        const res = await spinFn({ data: { participantId: activeId } });
+        if (!res.ok) {
+          // Se o servidor retornar erro, cancelamos o giro imediatamente
+          setStage("form");
+          setSpinning(false);
+          alert("Erro ao registrar giro: " + (res.error ?? "Tente novamente."));
           return;
         }
-      }
 
-      const res = await spinFn({ data: { participantId: activeId } });
-      if (!res.ok) {
-        // Erro real no servidor: alertar operador e voltar ao formulário sem simular giro
-        setStage("form");
-        setSpinning(false);
-        alert("Erro ao registrar giro: " + (res.error ?? "Tente novamente."));
-        return;
-      } else if (res.won) {
-        setResult({ won: true, prize: res.prize, code: res.code });
-        setFinalIcons([res.prize.icon, res.prize.icon, res.prize.icon]);
-      } else {
-        setResult({ won: false });
-        // Garante sempre 3 ícones DISTINTOS para não mostrar 3 iguais quando perde
-        const pool = ICON_KEYS.filter(Boolean);
-        const a = pool[Math.floor(Math.random() * pool.length)];
-        let b = pool[Math.floor(Math.random() * pool.length)];
-        while (b === a) b = pool[Math.floor(Math.random() * pool.length)];
-        let c = pool[Math.floor(Math.random() * pool.length)];
-        while (c === a || c === b) c = pool[Math.floor(Math.random() * pool.length)];
-        setFinalIcons([a, b, c]);
+        if (res.won) {
+          setResult({ won: true, prize: res.prize, code: res.code });
+          setFinalIcons([res.prize.icon, res.prize.icon, res.prize.icon]);
+        } else {
+          setResult({ won: false });
+          // Garante sempre 3 ícones DISTINTOS para não mostrar 3 iguais quando perde
+          const pool = ICON_KEYS.filter(Boolean);
+          const a = pool[Math.floor(Math.random() * pool.length)];
+          let b = pool[Math.floor(Math.random() * pool.length)];
+          while (b === a) b = pool[Math.floor(Math.random() * pool.length)];
+          let c = pool[Math.floor(Math.random() * pool.length)];
+          while (c === a || c === b) c = pool[Math.floor(Math.random() * pool.length)];
+          setFinalIcons([a, b, c]);
+        }
+      } catch (err) {
+        // Fallback para falha geral de rede
+        runTestSpin();
       }
-      settleCount.current = 0;
-      setSpinning(true);
-      playSpinTicks(2600);
     },
     [spinFn, runTestSpin, registerFn],
   );
