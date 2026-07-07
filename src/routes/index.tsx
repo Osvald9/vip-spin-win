@@ -48,9 +48,42 @@ function Kiosk() {
   const settleCount = useRef(0);
 
   const spinFn = useServerFn(spinSlot);
+  const prizesFn = useServerFn(listActivePrizes);
+  const [testPool, setTestPool] = useState<Array<{ id: string; name: string; icon: string }>>([]);
+
+  useEffect(() => {
+    if (!TEST_MODE) return;
+    prizesFn().then((r) => setTestPool(r.prizes ?? [])).catch(() => {});
+  }, [prizesFn]);
+
+  const runTestSpin = useCallback(() => {
+    setStage("spinning");
+    // 30% chance de perder no modo teste
+    const lose = Math.random() < 0.3 || testPool.length === 0;
+    if (lose) {
+      setResult({ won: false });
+      const pool = ICON_KEYS.filter(Boolean);
+      const a = pool[Math.floor(Math.random() * pool.length)];
+      let b = pool[Math.floor(Math.random() * pool.length)];
+      while (b === a) b = pool[Math.floor(Math.random() * pool.length)];
+      const c = pool[Math.floor(Math.random() * pool.length)];
+      setFinalIcons([a, b, c]);
+    } else {
+      const p = testPool[Math.floor(Math.random() * testPool.length)];
+      setResult({ won: true, prize: { id: p.id, name: p.name, icon: p.icon }, code: "TESTE-000000" });
+      setFinalIcons([p.icon, p.icon, p.icon]);
+    }
+    settleCount.current = 0;
+    setSpinning(true);
+    playSpinTicks(2600);
+  }, [testPool]);
 
   const handleSpin = useCallback(
-    async (id: string) => {
+    async (id: string | null) => {
+      if (!id) {
+        runTestSpin();
+        return;
+      }
       setStage("spinning");
       const res = await spinFn({ data: { participantId: id } });
       if (!res.ok) {
@@ -76,7 +109,7 @@ function Kiosk() {
       setSpinning(true);
       playSpinTicks(2600);
     },
-    [spinFn],
+    [spinFn, runTestSpin],
   );
 
   const onReelSettle = useCallback(() => {
