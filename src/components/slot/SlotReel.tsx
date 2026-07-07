@@ -27,6 +27,13 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
     forceRender((n) => n + 1);
   }, []);
 
+  const finalIconRef = useRef(finalIcon);
+  
+  // Sincroniza a ref com o finalIcon mais atualizado vindo do pai
+  useEffect(() => {
+    finalIconRef.current = finalIcon;
+  }, [finalIcon]);
+
   // Dispara a animação física de giro contínuo
   useEffect(() => {
     if (!spinning) {
@@ -38,10 +45,10 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
 
     const spinTime = 1000 + delay;
 
-    // Quando o giro começa, colocamos o finalIcon atual na esteira
+    // Quando o giro começa, montamos a esteira e colocamos o finalIcon atual da ref
     const strip = [...stripRef.current];
     const finalIndex = strip.length - 2;
-    strip[finalIndex] = finalIcon;
+    strip[finalIndex] = finalIconRef.current;
     stripRef.current = strip;
 
     const t = requestAnimationFrame(() => {
@@ -50,6 +57,13 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
     });
 
     const done = window.setTimeout(() => {
+      // Ao terminar o tempo físico do rolo, garantimos que o ícone final na esteira
+      // seja EXATAMENTE o finalIcon mais atualizado do banco
+      const currentStrip = [...stripRef.current];
+      currentStrip[finalIndex] = finalIconRef.current;
+      stripRef.current = currentStrip;
+      forceRender((n) => n + 1);
+
       settledRef.current = true;
       onSettle?.();
     }, spinTime + 50);
@@ -59,19 +73,6 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
       clearTimeout(done);
     };
   }, [spinning, delay, onSettle]);
-
-  // Atualiza dinamicamente o ícone final na esteira se ele mudar no meio do giro (resposta do banco)
-  // sem precisar recomeçar ou redefinir a animação em andamento
-  useEffect(() => {
-    if (!spinning || stripRef.current.length === 0) return;
-    const strip = [...stripRef.current];
-    const finalIndex = strip.length - 2;
-    if (strip[finalIndex] !== finalIcon) {
-      strip[finalIndex] = finalIcon;
-      stripRef.current = strip;
-      forceRender((n) => n + 1);
-    }
-  }, [finalIcon, spinning]);
   return (
     <div
       className="reel-window relative overflow-hidden rounded-2xl border-4 border-black bg-white shadow-[inset_0_4px_12px_rgba(0,0,0,0.18)] w-full aspect-square"
