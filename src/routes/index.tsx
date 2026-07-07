@@ -131,7 +131,6 @@ function Kiosk() {
 
         const res = await spinFn({ data: { participantId: activeId } });
         if (!res.ok) {
-          // Se o servidor retornar erro, cancelamos o giro imediatamente
           setStage("form");
           setSpinning(false);
           alert("Erro ao registrar giro: " + (res.error ?? "Tente novamente."));
@@ -153,17 +152,20 @@ function Kiosk() {
           setFinalIcons([a, b, c]);
         }
       } catch (err) {
-        // Fallback para falha geral de rede
-        runTestSpin();
+        // Em caso de erro de rede, apenas avisa sem engatilhar outra animação
+        setStage("form");
+        setSpinning(false);
+        alert("Erro de conexão. Verifique sua internet.");
       }
     },
-    [spinFn, runTestSpin, registerFn],
+    [spinFn, registerFn],
   );
 
   const onReelSettle = useCallback(() => {
     settleCount.current += 1;
     if (settleCount.current >= 3) {
       setSpinning(false);
+      // Atraso aumentado de 300ms para 1500ms para o jogador contemplar a combinação antes da tela de resultado surgir
       setTimeout(() => {
         if (result?.won) {
           playWin();
@@ -172,7 +174,7 @@ function Kiosk() {
           playLose();
         }
         setStage("result");
-      }, 300);
+      }, 1500);
     }
   }, [result]);
 
