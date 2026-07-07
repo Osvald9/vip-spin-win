@@ -14,13 +14,13 @@ const TEST_MODE = false; // Modo de teste desativado — cadastro obrigatório a
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Conexão VIP — Caça-níquel de brindes" },
+      { title: "Ativação Conexão VIP" },
       {
         name: "description",
         content:
           "Ativação Conexão VIP: cadastre-se, gire o caça-níquel e concorra a brindes no stand.",
       },
-      { property: "og:title", content: "Conexão VIP — Caça-níquel de brindes" },
+      { property: "og:title", content: "Ativação Conexão VIP" },
       {
         property: "og:description",
         content: "Cadastre-se e gire o caça-níquel para concorrer a brindes no stand Conexão VIP.",
