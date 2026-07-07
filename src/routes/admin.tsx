@@ -270,16 +270,27 @@ function PrizesTab({
       </section>
 
       <section className="space-y-3">
-        {prizes.map((p) => (
-          <div key={p.id} className="rounded-2xl border border-border bg-card/60 p-5">
-            <PrizeRow
-              prize={drafts[p.id] ?? p}
-              onChange={(x) => setDrafts((d) => ({ ...d, [p.id]: { ...(d[p.id] ?? p), ...x } as Prize }))}
-              onSave={() => onSave(drafts[p.id] ?? p)}
-              onDelete={() => onDelete(p.id)}
-            />
-          </div>
-        ))}
+        {prizes.map((p) => {
+          const rare = p.icon === "thermos";
+          return (
+            <div
+              key={p.id}
+              className={`rounded-2xl border ${rare ? "border-primary ring-2 ring-primary/40" : "border-border"} bg-card/60 p-5`}
+            >
+              {rare && (
+                <div className="mb-2 inline-block rounded-full bg-primary px-3 py-0.5 text-xs font-black uppercase tracking-widest text-primary-foreground">
+                  ★ Prêmio raro
+                </div>
+              )}
+              <PrizeRow
+                prize={drafts[p.id] ?? p}
+                onChange={(x) => setDrafts((d) => ({ ...d, [p.id]: { ...(d[p.id] ?? p), ...x } as Prize }))}
+                onSave={() => onSave(drafts[p.id] ?? p)}
+                onDelete={() => onDelete(p.id)}
+              />
+            </div>
+          );
+        })}
       </section>
     </div>
   );
