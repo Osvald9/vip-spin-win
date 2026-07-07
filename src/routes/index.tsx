@@ -374,6 +374,7 @@ function SlotBoard({
   canSpin,
   isSpinning,
   onSpin,
+  testMode,
 }: {
   spinning: boolean;
   finalIcons: [string, string, string];
@@ -381,46 +382,124 @@ function SlotBoard({
   canSpin: boolean;
   isSpinning: boolean;
   onSpin: () => void;
+  testMode?: boolean;
 }) {
   return (
-    <div className="rounded-3xl border-4 border-black bg-yellow p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-2xl font-black uppercase tracking-tight text-black">
-          2. Gire e ganhe
-        </h2>
-        <span className="text-xs font-black uppercase tracking-widest text-black">
-          3 iguais = brinde
-        </span>
-      </div>
+    <div className="relative overflow-hidden rounded-[2rem] border-[6px] border-black bg-yellow p-4 shadow-[8px_8px_0_0_#000]">
+      {/* Marquee bulbs frame */}
+      <BulbBorder />
 
-      <div className="rounded-2xl border-4 border-black bg-white p-4">
-        <div className="grid grid-cols-3 gap-4">
-          <SlotReel spinning={spinning} finalIcon={finalIcons[0]} delay={0} onSettle={onReelSettle} />
-          <SlotReel spinning={spinning} finalIcon={finalIcons[1]} delay={400} onSettle={onReelSettle} />
-          <SlotReel spinning={spinning} finalIcon={finalIcons[2]} delay={800} onSettle={onReelSettle} />
+      <div className="relative">
+        {/* Jackpot title bar */}
+        <div className="relative mx-2 mt-1 rounded-2xl border-4 border-black bg-black px-4 py-3 text-center">
+          <div className="flex items-center justify-center gap-3">
+            <Coins className="h-7 w-7 text-yellow" strokeWidth={2.8} />
+            <div
+              className="font-display text-4xl font-black uppercase tracking-[0.18em] text-yellow sm:text-5xl"
+              style={{
+                animation: "jackpot-flash 1.4s ease-in-out infinite",
+                textShadow: "0 0 12px var(--yellow), 3px 3px 0 #fff",
+              }}
+            >
+              Jackpot
+            </div>
+            <Coins className="h-7 w-7 text-yellow" strokeWidth={2.8} />
+          </div>
+          <div className="mt-1 text-[10px] font-black uppercase tracking-[0.4em] text-yellow/80">
+            Conexão VIP · 3 iguais = brinde
+          </div>
         </div>
-      </div>
 
-      <button
-        onClick={onSpin}
-        disabled={!canSpin || isSpinning}
-        className="btn-yellow btn-yellow-hover mt-5 w-full rounded-2xl bg-white py-8 text-4xl disabled:opacity-60"
-      >
-        {isSpinning ? (
-          <>
-            <Loader2 className="mr-3 inline h-9 w-9 animate-spin" /> Girando…
-          </>
-        ) : (
-          "GIRAR"
+        {/* Reels display */}
+        <div className="mx-2 mt-3 rounded-2xl border-4 border-black bg-white p-3 shadow-[inset_0_0_0_4px_#FFD400]">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <SlotReel spinning={spinning} finalIcon={finalIcons[0]} delay={0} onSettle={onReelSettle} />
+            <SlotReel spinning={spinning} finalIcon={finalIcons[1]} delay={400} onSettle={onReelSettle} />
+            <SlotReel spinning={spinning} finalIcon={finalIcons[2]} delay={800} onSettle={onReelSettle} />
+          </div>
+        </div>
+
+        {/* Marquee ticker */}
+        <div className="mx-2 mt-3 overflow-hidden rounded-xl border-4 border-black bg-black">
+          <div
+            className="flex whitespace-nowrap py-1.5 font-display text-sm font-black uppercase tracking-[0.3em] text-yellow"
+            style={{ animation: "marquee-scroll 22s linear infinite", width: "max-content" }}
+          >
+            {Array.from({ length: 2 }).map((_, i) => (
+              <span key={i} className="flex items-center gap-4 px-4">
+                <Flame className="h-4 w-4" /> Copo térmico raro
+                <span>★</span> Caneta VIP
+                <span>★</span> Copo plástico
+                <span>★</span> Gira · Gira · Gira
+                <Flame className="h-4 w-4" /> Sorte grande
+                <span>★</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Big spin button */}
+        <button
+          onClick={onSpin}
+          disabled={!canSpin || isSpinning}
+          className="btn-yellow btn-yellow-hover relative mx-2 mt-4 block w-[calc(100%-1rem)] rounded-2xl bg-white py-8 text-5xl disabled:opacity-60"
+          style={{ animation: canSpin && !isSpinning ? "big-pulse 1.4s ease-in-out infinite" : undefined }}
+        >
+          {isSpinning ? (
+            <span className="inline-flex items-center justify-center gap-3">
+              <Loader2 className="h-10 w-10 animate-spin" /> Girando…
+            </span>
+          ) : (
+            <span className="relative inline-block">
+              <span className="mr-2">🎰</span>GIRAR<span className="ml-2">🎰</span>
+            </span>
+          )}
+        </button>
+
+        {testMode && (
+          <p className="mt-3 px-2 text-center text-[11px] font-black uppercase tracking-[0.25em] text-black">
+            Modo teste ativo — cadastro opcional
+          </p>
         )}
-      </button>
-
-      {!canSpin && !isSpinning && (
-        <p className="mt-3 text-center text-sm font-bold uppercase tracking-widest text-black">
-          Faça o cadastro acima para liberar o giro
-        </p>
-      )}
+        {!canSpin && !isSpinning && !testMode && (
+          <p className="mt-3 px-2 text-center text-sm font-bold uppercase tracking-widest text-black">
+            Faça o cadastro abaixo para liberar o giro
+          </p>
+        )}
+      </div>
     </div>
+  );
+}
+
+function BulbBorder() {
+  // 20 bulbs across the top/bottom, 8 down each side — pure CSS with alternating animation
+  const bulb = (i: number, style: React.CSSProperties) => (
+    <span
+      key={i}
+      className="absolute h-3 w-3 rounded-full border-2 border-black"
+      style={{
+        animation: `${i % 2 === 0 ? "bulb-blink" : "bulb-blink-alt"} 0.9s ease-in-out infinite`,
+        ...style,
+      }}
+    />
+  );
+  const H = 22; // horizontal bulbs
+  const V = 10; // vertical bulbs
+  return (
+    <>
+      {Array.from({ length: H }).map((_, i) =>
+        bulb(i, { top: -6, left: `${(i / (H - 1)) * 100}%`, transform: "translateX(-50%)" }),
+      )}
+      {Array.from({ length: H }).map((_, i) =>
+        bulb(i + 100, { bottom: -6, left: `${(i / (H - 1)) * 100}%`, transform: "translateX(-50%)" }),
+      )}
+      {Array.from({ length: V }).map((_, i) =>
+        bulb(i + 200, { left: -6, top: `${((i + 1) / (V + 1)) * 100}%`, transform: "translateY(-50%)" }),
+      )}
+      {Array.from({ length: V }).map((_, i) =>
+        bulb(i + 300, { right: -6, top: `${((i + 1) / (V + 1)) * 100}%`, transform: "translateY(-50%)" }),
+      )}
+    </>
   );
 }
 
