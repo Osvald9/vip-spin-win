@@ -9,7 +9,7 @@ import { SlotReel } from "@/components/slot/SlotReel";
 import { SlotIcon, ICON_KEYS } from "@/components/slot/SlotIcon";
 import { playSpinTicks, playWin, playLose } from "@/lib/slot-sound";
 
-const TEST_MODE = true; // TODO: desativar antes do evento — permite girar sem cadastro
+const TEST_MODE = false; // Modo de teste desativado — cadastro obrigatório antes de girar
 
 export const Route = createFileRoute("/")({
   head: () => ({
