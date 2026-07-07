@@ -474,6 +474,60 @@ export const adminDeletePrize = createServerFn({ method: "POST" })
     }
   });
 
+export const adminDeleteParticipant = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => adminAuth.extend({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    checkPin(data.pin);
+    if (shouldUseSupabase()) {
+      const supabase = await loadAdmin();
+      
+      // Busca o participante para saber se ganhou prêmio
+      const { data: part } = await supabase
+        .from("participants")
+        .select("won, prize_id")
+        .eq("id", data.id)
+        .single();
+
+      // Deleta o participante
+      await supabase.from("participants").delete().eq("id", data.id);
+
+      // Se ele tinha ganho um brinde, estorna/devolve +1 no estoque dele
+      if (part?.won && part?.prize_id) {
+        const { data: prize } = await supabase
+          .from("prizes")
+          .select("remaining_quantity")
+          .eq("id", part.prize_id)
+          .single();
+        
+        if (prize) {
+          await supabase
+            .from("prizes")
+            .update({ remaining_quantity: prize.remaining_quantity + 1 })
+            .eq("id", part.prize_id);
+        }
+      }
+      return { ok: true };
+    } else {
+      const db = await getLocalDatabase();
+      const participants = await db.readParticipants();
+      const part = participants.find((p: any) => p.id === data.id);
+      
+      const filtered = participants.filter((p: any) => p.id !== data.id);
+      await db.writeParticipants(filtered);
+
+      // Estorno no banco local
+      if (part?.won && part?.prize_id) {
+        const prizes = await db.readPrizes();
+        const prizeIndex = prizes.findIndex((p: any) => p.id === part.prize_id);
+        if (prizeIndex !== -1) {
+          prizes[prizeIndex].remaining_quantity += 1;
+          await db.writePrizes(prizes);
+        }
+      }
+      return { ok: true };
+    }
+  });
+
 export const adminUploadIcon = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z

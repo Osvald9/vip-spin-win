@@ -9,6 +9,7 @@ import {
   adminUpsertPrize,
   adminDeletePrize,
   adminUploadIcon,
+  adminDeleteParticipant,
 } from "@/lib/slot.functions";
 import { SlotIcon, ICON_KEYS } from "@/components/slot/SlotIcon";
 
@@ -114,6 +115,7 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
   const listAll = useServerFn(adminListAll);
   const upsert = useServerFn(adminUpsertPrize);
   const del = useServerFn(adminDeletePrize);
+  const delParticipant = useServerFn(adminDeleteParticipant);
   const [prizes, setPrizes] = useState<Prize[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,6 +151,18 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
   async function remove(id: string) {
     if (!confirm("Excluir este prêmio?")) return;
     await del({ data: { pin, id } });
+    await refresh();
+  }
+  async function deleteSelectedParticipants(ids: string[]) {
+    if (!confirm(`Tem certeza que deseja excluir ${ids.length} participante(s)? Os prêmios deles serão estornados no estoque.`)) return;
+    setLoading(true);
+    try {
+      for (const id of ids) {
+        await delParticipant({ data: { pin, id } });
+      }
+    } catch (e: any) {
+      alert("Erro ao excluir participante(s): " + e.message);
+    }
     await refresh();
   }
 
@@ -213,7 +227,11 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         ) : tab === "prizes" ? (
           <PrizesTab pin={pin} prizes={prizes} onSave={save} onDelete={remove} />
         ) : (
-          <ParticipantsTab participants={participants} onExport={exportCSV} />
+          <ParticipantsTab 
+            participants={participants} 
+            onExport={exportCSV} 
+            onDeleteSelected={deleteSelectedParticipants}
+          />
         )}
       </main>
     </div>
@@ -445,27 +463,74 @@ function NumberField({
 function ParticipantsTab({
   participants,
   onExport,
+  onDeleteSelected,
 }: {
   participants: Participant[];
   onExport: () => void;
+  onDeleteSelected: (ids: string[]) => void | Promise<void>;
 }) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === participants.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(participants.map((p) => p.id));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleDelete = async () => {
+    if (selectedIds.length === 0) return;
+    await onDeleteSelected(selectedIds);
+    setSelectedIds([]);
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="text-sm text-muted-foreground">
           {participants.length} participante(s) · {participants.filter((p) => p.won).length} ganhadores
+          {selectedIds.length > 0 && (
+            <span className="ml-2 font-bold text-destructive">
+              ({selectedIds.length} selecionado(s))
+            </span>
+          )}
         </div>
-        <button
-          onClick={onExport}
-          className="btn-vip btn-vip-hover flex items-center gap-2 rounded-lg px-4 py-2 text-sm"
-        >
-          <Download className="h-4 w-4" /> Exportar CSV
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-white hover:bg-destructive/90"
+            >
+              <Trash2 className="h-4 w-4" /> Excluir Selecionados
+            </button>
+          )}
+          <button
+            onClick={onExport}
+            className="btn-vip btn-vip-hover flex items-center gap-2 rounded-lg px-4 py-2 text-sm"
+          >
+            <Download className="h-4 w-4" /> Exportar CSV
+          </button>
+        </div>
       </div>
       <div className="overflow-x-auto rounded-2xl border border-border">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-left text-xs uppercase tracking-widest text-muted-foreground">
             <tr>
+              <th className="px-4 py-3 w-10">
+                <input
+                  type="checkbox"
+                  checked={participants.length > 0 && selectedIds.length === participants.length}
+                  onChange={toggleSelectAll}
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                />
+              </th>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">WhatsApp</th>
               <th className="px-4 py-3">Cidade</th>
@@ -477,6 +542,14 @@ function ParticipantsTab({
           <tbody>
             {participants.map((p) => (
               <tr key={p.id} className="border-t border-border">
+                <td className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(p.id)}
+                    onChange={() => toggleSelectOne(p.id)}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                  />
+                </td>
                 <td className="px-4 py-3 font-medium">{p.full_name}</td>
                 <td className="px-4 py-3">{p.whatsapp}</td>
                 <td className="px-4 py-3">{p.city}</td>
@@ -497,7 +570,7 @@ function ParticipantsTab({
             ))}
             {participants.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
                   Nenhum participante ainda.
                 </td>
               </tr>
