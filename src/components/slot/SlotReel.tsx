@@ -19,8 +19,8 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
   // Dispara a animação física de giro contínuo
   useEffect(() => {
     if (!spinning) {
-      setTransitionMs(0);
-      setTargetIndex(0);
+      // IMPORTANTE: Não reseta o strip nem o targetIndex instantaneamente para zero aqui!
+      // Se resetarmos isso, o rolo pisca voltando ao primeiro elemento assim que 'spinning' vira false.
       return;
     }
     settledRef.current = false;
@@ -54,7 +54,7 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
     };
   }, [spinning, finalIcon, delay, onSettle]);
 
-  // Se a esteira estiver vazia inicialmente, mostra um ícone de placeholder
+  // Se a esteira estiver vazia inicialmente, mostra o finalIcon estático
   const displayStrip = strip.length > 0 ? strip : [finalIcon || "zap", finalIcon || "zap", finalIcon || "zap"];
   const curTargetIndex = strip.length > 0 ? targetIndex : 1;
 
