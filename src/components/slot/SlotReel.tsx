@@ -35,7 +35,9 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
     setTransitionMs(0);
     setTargetIndex(0);
 
-    const spinTime = 2200 + delay;
+    // Spin total duration is much faster: base 1000ms.
+    // The delay between the reels is larger (e.g. 600ms, 1200ms) to create high tension.
+    const spinTime = 1000 + delay;
     
     // Replace the strip's final index with the target icon
     const strip = [...stripRef.current];

@@ -444,8 +444,8 @@ function SlotBoard({
         <div className="mx-2 mt-4">
           <div className="grid grid-cols-3 gap-3">
             <SlotReel spinning={spinning} finalIcon={finalIcons[0]} delay={0} onSettle={onReelSettle} />
-            <SlotReel spinning={spinning} finalIcon={finalIcons[1]} delay={400} onSettle={onReelSettle} />
-            <SlotReel spinning={spinning} finalIcon={finalIcons[2]} delay={800} onSettle={onReelSettle} />
+            <SlotReel spinning={spinning} finalIcon={finalIcons[1]} delay={700} onSettle={onReelSettle} />
+            <SlotReel spinning={spinning} finalIcon={finalIcons[2]} delay={1400} onSettle={onReelSettle} />
           </div>
         </div>
 
