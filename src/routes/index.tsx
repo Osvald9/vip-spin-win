@@ -2,12 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import confetti from "canvas-confetti";
-import { Loader2, Trophy, PartyPopper, RotateCcw, Wifi } from "lucide-react";
+import { Loader2, Trophy, PartyPopper, RotateCcw, Wifi, Coins, Flame } from "lucide-react";
 
-import { registerParticipant, spinSlot } from "@/lib/slot.functions";
+import { registerParticipant, spinSlot, listActivePrizes } from "@/lib/slot.functions";
 import { SlotReel } from "@/components/slot/SlotReel";
 import { SlotIcon, ICON_KEYS } from "@/components/slot/SlotIcon";
 import { playSpinTicks, playWin, playLose } from "@/lib/slot-sound";
+
+const TEST_MODE = true; // TODO: desativar antes do evento — permite girar sem cadastro
 
 export const Route = createFileRoute("/")({
   head: () => ({
