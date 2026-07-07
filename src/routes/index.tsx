@@ -403,8 +403,12 @@ function ResultScreen({
               <PartyPopper className="h-14 w-14 text-black" strokeWidth={2.5} />
             </div>
             <h1 className="mt-6 text-4xl font-black leading-tight">
-              Parabéns! Você ganhou um<br />
-              <span className="rounded-lg bg-yellow px-2">brinde Conexão VIP</span>
+              Parabéns! Você ganhou{" "}
+              <span className="rounded-lg bg-yellow px-2">
+                {prizePhrase(result.prize)}
+              </span>
+              <br />
+              <span className="text-2xl">Conexão VIP</span>
             </h1>
 
             <div className="mt-8 flex w-full items-center gap-4 rounded-2xl border-4 border-black bg-white p-5">
