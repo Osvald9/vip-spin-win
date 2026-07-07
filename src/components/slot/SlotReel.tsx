@@ -15,15 +15,18 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
   const [transitionMs, setTransitionMs] = useState(0);
   const settledRef = useRef(false);
 
-  // Build a long strip of random icons, ending with the final icon at a known index.
+  // Build a long strip of random icons on the client only (avoid SSR hydration mismatch).
   const stripRef = useRef<string[]>([]);
-  if (stripRef.current.length === 0) {
+  const [, forceRender] = useState(0);
+  useEffect(() => {
+    if (stripRef.current.length > 0) return;
     const strip: string[] = [];
     for (let i = 0; i < 40; i++) {
       strip.push(ICON_KEYS[Math.floor(Math.random() * ICON_KEYS.length)]);
     }
     stripRef.current = strip;
-  }
+    forceRender((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     if (!spinning) return;
