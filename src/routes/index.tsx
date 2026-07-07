@@ -536,9 +536,6 @@ function ResultScreen({
           <RotateCcw className="mr-2 inline h-6 w-6" /> Nova participação
         </button>
 
-        <p className="mt-8 text-xs font-bold uppercase tracking-widest text-black">
-          Conexão VIP — a internet que conecta você aos melhores momentos
-        </p>
       </div>
     </div>
   );
