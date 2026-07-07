@@ -149,20 +149,26 @@ function Kiosk() {
   return (
     <div className="min-h-screen w-full bg-white text-black">
       <TopBar />
-      <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 pb-10 pt-6">
-        <RegistrationForm
-          disabled={stage !== "form" || !!participantId}
-          participantReady={!!participantId}
-          onDone={(id) => setParticipantId(id)}
-        />
-
+      {TEST_MODE && (
+        <div className="border-b-4 border-black bg-black py-1.5 text-center text-[11px] font-black uppercase tracking-[0.3em] text-yellow">
+          ⚠ Modo teste — giro liberado sem cadastro
+        </div>
+      )}
+      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pb-10 pt-4">
         <SlotBoard
           spinning={spinning}
           finalIcons={finalIcons}
           onReelSettle={onReelSettle}
-          canSpin={!!participantId && stage === "form"}
+          canSpin={(TEST_MODE || !!participantId) && stage === "form"}
           isSpinning={stage === "spinning"}
-          onSpin={() => participantId && handleSpin(participantId)}
+          onSpin={() => handleSpin(participantId)}
+          testMode={TEST_MODE && !participantId}
+        />
+
+        <RegistrationForm
+          disabled={stage !== "form" || !!participantId}
+          participantReady={!!participantId}
+          onDone={(id) => setParticipantId(id)}
         />
       </div>
     </div>
