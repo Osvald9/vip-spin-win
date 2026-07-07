@@ -472,6 +472,15 @@ function ResultScreen({
   );
 }
 
+function prizePhrase(prize: { name: string; icon: string }) {
+  const map: Record<string, string> = {
+    thermos: "um copo térmico",
+    pen: "uma caneta",
+    cup: "um copo plástico",
+  };
+  return map[prize.icon] ?? prize.name;
+}
+
 function fireConfetti() {
   const end = Date.now() + 1600;
   const colors = ["#FFD400", "#000000", "#FFFFFF"];
