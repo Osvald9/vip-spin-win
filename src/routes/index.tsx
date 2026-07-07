@@ -104,11 +104,6 @@ function Kiosk() {
       setStage("spinning");
       settleCount.current = 0;
       
-      // Inicia a animação de giro visual IMEDIATAMENTE na tela
-      setSpinning(true);
-      playSpinTicks(2600);
-
-      // Enquanto o motor gira visualmente, fazemos a chamada ao servidor em segundo plano
       try {
         if (!activeId) {
           // Criar participante de teste/rápido para persistir o giro e diminuir o estoque no banco
@@ -123,7 +118,6 @@ function Kiosk() {
           if (tempRes.ok) {
             activeId = tempRes.participantId;
           } else {
-            // Em caso de falha de conexão no registro, simula giro local
             runTestSpin();
             return;
           }
@@ -142,7 +136,6 @@ function Kiosk() {
           setFinalIcons([res.prize.icon, res.prize.icon, res.prize.icon]);
         } else {
           setResult({ won: false });
-          // Garante sempre 3 ícones DISTINTOS para não mostrar 3 iguais quando perde
           const pool = ICON_KEYS.filter(Boolean);
           const a = pool[Math.floor(Math.random() * pool.length)];
           let b = pool[Math.floor(Math.random() * pool.length)];
@@ -151,8 +144,12 @@ function Kiosk() {
           while (c === a || c === b) c = pool[Math.floor(Math.random() * pool.length)];
           setFinalIcons([a, b, c]);
         }
+        
+        // SÓ inicia o giro físico dos rolos após recebermos as chaves reais de destino do banco.
+        // Isso evita qualquer diferença entre o que roda e em qual ícone o rolo deve parar!
+        setSpinning(true);
+        playSpinTicks(2600);
       } catch (err) {
-        // Em caso de erro de rede, apenas avisa sem engatilhar outra animação
         setStage("form");
         setSpinning(false);
         alert("Erro de conexão. Verifique sua internet.");
@@ -517,9 +514,6 @@ function ResultScreen({
             </h1>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-4 rounded-3xl border-4 border-black bg-yellow p-8 w-full">
-              <div className="grid h-32 w-32 place-items-center rounded-2xl border-4 border-black bg-white">
-                <SlotIcon name={result.prize.icon} className="h-24 w-24 object-contain mx-auto" />
-              </div>
               <div className="text-center">
                 <div className="text-xs font-black uppercase tracking-widest text-black/60">
                   Seu prêmio

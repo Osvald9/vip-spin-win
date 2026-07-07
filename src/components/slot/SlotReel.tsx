@@ -13,26 +13,8 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
   const [transitionMs, setTransitionMs] = useState(0);
   const settledRef = useRef(false);
 
-  // Build a long strip of random icons on the client only (avoid SSR hydration mismatch).
-  const stripRef = useRef<string[]>([]);
-  const [, forceRender] = useState(0);
-  
-  useEffect(() => {
-    if (stripRef.current.length > 0) return;
-    const strip: string[] = [];
-    for (let i = 0; i < 40; i++) {
-      strip.push(ICON_KEYS[Math.floor(Math.random() * ICON_KEYS.length)]);
-    }
-    stripRef.current = strip;
-    forceRender((n) => n + 1);
-  }, []);
-
-  const finalIconRef = useRef(finalIcon);
-  
-  // Sincroniza a ref com o finalIcon mais atualizado vindo do pai
-  useEffect(() => {
-    finalIconRef.current = finalIcon;
-  }, [finalIcon]);
+  // Armazena a esteira estática de ícones que será renderizada na tela
+  const [strip, setStrip] = useState<string[]>([]);
 
   // Dispara a animação física de giro contínuo
   useEffect(() => {
@@ -43,27 +25,25 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
     }
     settledRef.current = false;
 
+    // Monta uma nova esteira exclusiva para este giro, terminando exatamente no finalIcon correto
+    const newStrip: string[] = [];
+    for (let i = 0; i < 30; i++) {
+      newStrip.push(ICON_KEYS[Math.floor(Math.random() * ICON_KEYS.length)]);
+    }
+    
+    const finalIndex = newStrip.length - 2; // stops at second to last index to align centered in a 1-item viewport
+    newStrip[finalIndex] = finalIcon; // Injeta o ícone definitivo
+    setStrip(newStrip);
+
     const spinTime = 1000 + delay;
 
-    // Quando o giro começa, montamos a esteira e colocamos o finalIcon atual da ref
-    const strip = [...stripRef.current];
-    const finalIndex = strip.length - 2;
-    strip[finalIndex] = finalIconRef.current;
-    stripRef.current = strip;
-
+    // Aguarda um frame para aplicar a transição CSS com transição de rolagem suave
     const t = requestAnimationFrame(() => {
       setTransitionMs(spinTime);
       setTargetIndex(finalIndex);
     });
 
     const done = window.setTimeout(() => {
-      // Ao terminar o tempo físico do rolo, garantimos que o ícone final na esteira
-      // seja EXATAMENTE o finalIcon mais atualizado do banco
-      const currentStrip = [...stripRef.current];
-      currentStrip[finalIndex] = finalIconRef.current;
-      stripRef.current = currentStrip;
-      forceRender((n) => n + 1);
-
       settledRef.current = true;
       onSettle?.();
     }, spinTime + 50);
@@ -72,7 +52,12 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
       cancelAnimationFrame(t);
       clearTimeout(done);
     };
-  }, [spinning, delay, onSettle]);
+  }, [spinning, finalIcon, delay, onSettle]);
+
+  // Se a esteira estiver vazia inicialmente, mostra um ícone de placeholder
+  const displayStrip = strip.length > 0 ? strip : [finalIcon || "zap", finalIcon || "zap", finalIcon || "zap"];
+  const curTargetIndex = strip.length > 0 ? targetIndex : 1;
+
   return (
     <div
       className="reel-window relative overflow-hidden rounded-2xl border-4 border-black bg-white shadow-[inset_0_4px_12px_rgba(0,0,0,0.18)] w-full aspect-square"
@@ -80,11 +65,11 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
       <div
         className="absolute left-0 right-0 flex flex-col items-center"
         style={{
-          transform: `translateY(-${(targetIndex / stripRef.current.length) * 100}%)`,
+          transform: `translateY(-${(curTargetIndex / displayStrip.length) * 100}%)`,
           transition: transitionMs > 0 ? `transform ${transitionMs}ms cubic-bezier(0.15, 0.7, 0.15, 1)` : "none",
         }}
       >
-        {stripRef.current.map((icon, i) => (
+        {displayStrip.map((icon, i) => (
           <div key={i} className="flex items-center justify-center w-full aspect-square shrink-0 p-4">
             <SlotIcon name={icon} className="w-full h-full object-contain" />
           </div>
