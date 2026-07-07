@@ -27,6 +27,7 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
     forceRender((n) => n + 1);
   }, []);
 
+  // Dispara a animação física de giro contínuo
   useEffect(() => {
     if (!spinning) {
       setTransitionMs(0);
@@ -36,10 +37,10 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
     settledRef.current = false;
 
     const spinTime = 1000 + delay;
-    
-    // Replace the strip's final index with the target icon
+
+    // Quando o giro começa, colocamos o finalIcon atual na esteira
     const strip = [...stripRef.current];
-    const finalIndex = strip.length - 2; // stops at second to last index to align centered in a 1-item viewport
+    const finalIndex = strip.length - 2;
     strip[finalIndex] = finalIcon;
     stripRef.current = strip;
 
@@ -57,7 +58,20 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
       cancelAnimationFrame(t);
       clearTimeout(done);
     };
-  }, [spinning, finalIcon, delay, onSettle]);
+  }, [spinning, delay, onSettle]);
+
+  // Atualiza dinamicamente o ícone final na esteira se ele mudar no meio do giro (resposta do banco)
+  // sem precisar recomeçar ou redefinir a animação em andamento
+  useEffect(() => {
+    if (!spinning || stripRef.current.length === 0) return;
+    const strip = [...stripRef.current];
+    const finalIndex = strip.length - 2;
+    if (strip[finalIndex] !== finalIcon) {
+      strip[finalIndex] = finalIcon;
+      stripRef.current = strip;
+      forceRender((n) => n + 1);
+    }
+  }, [finalIcon, spinning]);
   return (
     <div
       className="reel-window relative overflow-hidden rounded-2xl border-4 border-black bg-white shadow-[inset_0_4px_12px_rgba(0,0,0,0.18)] w-full aspect-square"
