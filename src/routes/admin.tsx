@@ -107,7 +107,7 @@ function Admin() {
     );
   }
 
-  return <AdminDashboard pin={pin} onLogout={() => { sessionStorage.removeItem(PIN_KEY); setAuthed(false); setPin(""); }} />;
+  return <AdminDashboard pin={pin} onLogout={() => { sessionStorage.removeItem(PIN_KEY); window.location.href = "/"; }} />;
 }
 
 function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }) {
