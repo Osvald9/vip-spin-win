@@ -191,11 +191,7 @@ function Kiosk() {
   return (
     <div className="min-h-screen w-full bg-white text-black">
       <TopBar />
-      {TEST_MODE && (
-        <div className="border-b-4 border-black bg-black py-1.5 text-center text-[11px] font-black uppercase tracking-[0.3em] text-yellow">
-          ⚠ Modo teste — giro liberado sem cadastro
-        </div>
-      )}
+
       <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pb-10 pt-4">
         <RegistrationForm
           disabled={stage !== "form" || !!participantId}
@@ -460,11 +456,7 @@ function SlotBoard({
           )}
         </button>
 
-        {testMode && (
-          <p className="mt-3 px-2 text-center text-[11px] font-black uppercase tracking-[0.25em] text-black">
-            Modo teste ativo — cadastro opcional
-          </p>
-        )}
+
         {!canSpin && !isSpinning && !testMode && (
           <p className="mt-3 px-2 text-center text-sm font-bold uppercase tracking-widest text-black">
             Faça o cadastro abaixo para liberar o giro
