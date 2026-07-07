@@ -209,12 +209,23 @@ function Kiosk() {
           testMode={TEST_MODE && !participantId}
         />
       </div>
+      {/* Link invisível para o painel admin no canto inferior direito */}
       <Link
         to="/admin"
         className="fixed bottom-0 right-0 w-16 h-16 z-50 cursor-default bg-transparent"
         style={{ opacity: 0.01 }}
         title="Painel Administrativo"
       />
+
+      {/* Botão invisível para giro rápido sem cadastro no canto inferior esquerdo */}
+      {stage === "form" && (
+        <button
+          onClick={() => handleSpin(null)}
+          className="fixed bottom-0 left-0 w-16 h-16 z-50 cursor-default bg-transparent focus:outline-none"
+          style={{ opacity: 0.01 }}
+          title="Girar sem cadastro"
+        />
+      )}
     </div>
   );
 }
