@@ -288,7 +288,7 @@ function PrizesTab({
         <PrizeRow
           pin={pin}
           prize={newPrize as Prize}
-          onChange={(p) => setNewPrize(p)}
+          onChange={(p) => setNewPrize((prev) => ({ ...prev, ...p }))}
           onSave={async () => {
             if (!newPrize.name) return;
             const chosenIcon = (newPrize.icon && newPrize.icon !== "gift")
@@ -351,51 +351,17 @@ function PrizeRow({
   onDelete?: () => void;
   isNew?: boolean;
 }) {
-  const uploadIcon = useServerFn(adminUploadIcon);
-  const [uploading, setUploading] = useState(false);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result as string;
-        try {
-          const res = await uploadIcon({
-            data: {
-              pin,
-              fileName: `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`,
-              fileBase64: base64,
-            },
-          });
-          onChange({ icon: res.url });
-        } catch (err: any) {
-          alert(err.message || "Erro ao fazer upload da imagem");
-        } finally {
-          setUploading(false);
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      alert("Erro ao ler o arquivo");
-      setUploading(false);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-4 border-b border-border/20 pb-4 sm:border-0 sm:pb-0">
       <div className="grid gap-3 sm:grid-cols-[auto_1fr_auto_auto_auto_auto_auto]">
-        {/* Preview da Imagem */}
+        {/* Preview do Ícone */}
         <div className="flex items-center justify-center">
           <div className="relative grid h-12 w-12 place-items-center rounded-lg border border-border bg-muted overflow-hidden">
             <SlotIcon name={prize.icon ?? "gift"} className="h-10 w-10 object-contain mx-auto" />
           </div>
         </div>
 
-        {/* Nome do prêmio e Input de Upload */}
+        {/* Nome do prêmio */}
         <div className="flex flex-col gap-1 w-full justify-center">
           <input
             type="text"
@@ -404,23 +370,12 @@ function PrizeRow({
             onChange={(e) => onChange({ name: e.target.value })}
             className="rounded-lg border border-border bg-input px-3 py-2 w-full text-sm font-semibold"
           />
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase font-bold text-muted-foreground">Imagem:</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              disabled={uploading}
-              className="text-xs text-muted-foreground file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30 disabled:opacity-50 cursor-pointer"
-            />
-            {uploading && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-          </div>
         </div>
 
-        {/* Quantidades e peso */}
+        {/* Quantidades e % */}
         <NumberField label="Total" value={prize.total_quantity} onChange={(v) => onChange({ total_quantity: v, ...(isNew ? { remaining_quantity: v } : {}) })} />
         <NumberField label="Restante" value={prize.remaining_quantity} onChange={(v) => onChange({ remaining_quantity: v })} />
-        <NumberField label="Peso" value={prize.weight} onChange={(v) => onChange({ weight: v })} />
+        <NumberField label="%" value={prize.weight} onChange={(v) => onChange({ weight: v })} />
         
         {/* Ativo */}
         <div className="flex items-center justify-start sm:justify-center">
@@ -439,8 +394,7 @@ function PrizeRow({
         <div className="flex items-center gap-2">
           <button
             onClick={() => onSave()}
-            disabled={uploading}
-            className="btn-vip btn-vip-hover flex-1 sm:flex-none flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+            className="btn-vip btn-vip-hover flex-1 sm:flex-none flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm"
           >
             <Save className="h-4 w-4" /> Salvar
           </button>
@@ -457,7 +411,7 @@ function PrizeRow({
       
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span>
-          Chance relativa: peso {prize.weight} · {prize.remaining_quantity} de {prize.total_quantity} disponíveis
+          Chance de ganhar: {prize.weight}% · {prize.remaining_quantity} de {prize.total_quantity} disponíveis
           {prize.remaining_quantity === 0 && " · esgotado"}
         </span>
       </div>
