@@ -69,6 +69,30 @@
   60% { transform: scale(1.15); opacity: 1; }
   100% { transform: scale(1); }
 }
+@keyframes bulb-blink {
+  0%, 100% { background: var(--yellow); box-shadow: 0 0 0 2px #000, 0 0 12px var(--yellow); }
+  50% { background: #fff; box-shadow: 0 0 0 2px #000; }
+}
+@keyframes bulb-blink-alt {
+  0%, 100% { background: #fff; box-shadow: 0 0 0 2px #000; }
+  50% { background: var(--yellow); box-shadow: 0 0 0 2px #000, 0 0 12px var(--yellow); }
+}
+@keyframes jackpot-flash {
+  0%, 100% { transform: scale(1) rotate(-1deg); }
+  50% { transform: scale(1.04) rotate(1deg); }
+}
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes shine {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes big-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--yellow); }
+  50% { transform: scale(1.02); box-shadow: 0 0 0 14px transparent; }
+}
 
 @layer base {
   * { border-color: var(--color-border); }
