@@ -202,58 +202,53 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
         </button>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-6 w-full max-w-4xl mx-auto items-stretch">
-      {/* Coluna Esquerda: Placar e Controles */}
-      <section className="flex flex-col gap-5">
-        <div className="rounded-2xl border-4 border-black bg-white p-5 shadow-[6px_6px_0_0_#000] flex flex-col gap-4">
-          <h2 className="text-2xl font-black uppercase tracking-tight text-black">
-            Seu Progresso
-          </h2>
-
+      <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto items-stretch">
+        {/* Placar e Controles (Layout Compacto Vertical/Horizontal) */}
+        <div className="rounded-2xl border-4 border-black bg-white p-4 shadow-[6px_6px_0_0_#000] flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border-3 border-black bg-white p-4 text-center">
-              <span className="block text-xs font-black uppercase tracking-widest text-black/60">
+            <div className="rounded-xl border-3 border-black bg-white p-3 text-center">
+              <span className="block text-[10px] font-black uppercase tracking-widest text-black/60">
                 Pontos
               </span>
-              <span className="text-4xl font-black text-black" id="score-value">
+              <span className="text-3xl font-black text-black" id="score-value">
                 {score}
               </span>
             </div>
-            <div className="rounded-xl border-3 border-black bg-yellow/20 p-4 text-center">
-              <span className="block text-xs font-black uppercase tracking-widest text-yellow/80">
+            <div className="rounded-xl border-3 border-black bg-yellow/20 p-3 text-center">
+              <span className="block text-[10px] font-black uppercase tracking-widest text-yellow/80">
                 Recorde
               </span>
-              <span className="text-4xl font-black text-black flex items-center justify-center gap-1">
-                <Trophy className="h-6 w-6 text-yellow shrink-0 fill-yellow/20 stroke-black stroke-2" />
+              <span className="text-3xl font-black text-black flex items-center justify-center gap-1">
+                <Trophy className="h-5 w-5 text-yellow shrink-0 fill-yellow/20 stroke-black stroke-2" />
                 {highScore}
               </span>
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 mt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={startGame}
               disabled={status === "watching"}
-              className="btn-yellow btn-yellow-hover w-full py-4 text-xl flex items-center justify-center gap-2 rounded-2xl disabled:opacity-60"
+              className="btn-yellow btn-yellow-hover py-3.5 text-lg flex items-center justify-center gap-2 rounded-xl disabled:opacity-60 cursor-pointer"
             >
               {status === "watching" || status === "playing" ? (
                 <>
-                  <RotateCcw className="h-5 w-5 animate-spin" /> Em jogo...
+                  <RotateCcw className="h-4 w-4 animate-spin" /> Em jogo...
                 </>
               ) : (
                 <>
-                  <Play className="h-5 w-5 fill-current" /> Iniciar Jogo
+                  <Play className="h-4 w-4 fill-current" /> Iniciar Jogo
                 </>
               )}
             </button>
 
             {/* Controle de som */}
-            <div className="flex items-center justify-between border-3 border-black bg-white rounded-xl p-3">
-              <span className="text-sm font-black uppercase tracking-wide flex items-center gap-2 text-black">
+            <div className="flex items-center justify-between border-3 border-black bg-white rounded-xl p-2.5">
+              <span className="text-xs font-black uppercase tracking-wide flex items-center gap-1.5 text-black select-none">
                 {soundEnabled ? (
-                  <Volume2 className="h-5 w-5 stroke-[2.5]" />
+                  <Volume2 className="h-4.5 w-4.5 stroke-[2.5]" />
                 ) : (
-                  <VolumeX className="h-5 w-5 stroke-[2.5]" />
+                  <VolumeX className="h-4.5 w-4.5 stroke-[2.5]" />
                 )}
                 Efeitos Sonoros
               </span>
@@ -271,107 +266,82 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
           </div>
         </div>
 
-        {/* Instruções */}
-        <div className="rounded-2xl border-4 border-black bg-white p-5 shadow-[6px_6px_0_0_#000] flex flex-col gap-3">
-          <h3 className="text-base font-black uppercase tracking-wider flex items-center gap-2 text-black">
-            <HelpCircle className="h-5 w-5 stroke-[2.5]" /> Como Jogar
-          </h3>
-          <ul className="flex flex-col gap-2 text-sm text-black">
-            <li className="flex gap-2 items-start">
-              <span className="font-black text-destructive">1.</span>
-              <span>Clique em <strong>Iniciar Jogo</strong> para ver a sequência.</span>
-            </li>
-            <li className="flex gap-2 items-start">
-              <span className="font-black text-destructive">2.</span>
-              <span>Observe as cores brilhando e ouça os sons gerados.</span>
-            </li>
-            <li className="flex gap-2 items-start">
-              <span className="font-black text-destructive">3.</span>
-              <span>Repita a sequência clicando nos pads coloridos correspondentes.</span>
-            </li>
-            <li className="flex gap-2 items-start">
-              <span className="font-black text-destructive">4.</span>
-              <span>A velocidade aumenta a cada acerto. Desafie sua memória!</span>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      {/* Coluna Direita: Tabuleiro */}
-      <section
-        className={`rounded-3xl border-6 border-black bg-yellow p-6 shadow-[8px_8px_0_0_#000] flex flex-col items-center justify-center min-h-[440px] transition-colors duration-150 ${
-          isFlashingError ? "bg-red-400" : ""
-        }`}
-      >
-        {/* Status display */}
-        <div
-          className={`border-3 px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest mb-6 shadow-[3px_3px_0_0_#000] ${statusDisplay.style}`}
-        >
-          {statusDisplay.text}
-        </div>
-
-        {/* Circular board */}
-        <div
-          className={`relative w-72 h-72 sm:w-80 sm:h-80 rounded-full border-[8px] border-black bg-black p-3 grid grid-cols-2 grid-rows-2 gap-3 shadow-[8px_8px_0_0_#000] ${
-            status === "playing" ? "user-turn cursor-pointer" : "pointer-events-none"
+        {/* Tabuleiro Ampliado Centrado */}
+        <section
+          className={`rounded-3xl border-6 border-black bg-yellow p-4 sm:p-8 shadow-[8px_8px_0_0_#000] flex flex-col items-center justify-center min-h-[380px] sm:min-h-[480px] transition-colors duration-150 ${
+            isFlashingError ? "bg-red-400" : ""
           }`}
-          style={{
-            transform: isFlashingError ? "scale(1.03) rotate(2deg)" : "scale(1)",
-            transition: "transform 0.1s"
-          }}
         >
-          <button
-            onClick={() => handlePadClick("green")}
-            disabled={status !== "playing"}
-            className={`rounded-tl-full border-4 border-black bg-emerald-600 transition-all ${
-              activePad === "green"
-                ? "bg-emerald-300 opacity-100 scale-95 shadow-[0_0_25px_rgba(52,211,153,0.9)]"
-                : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
-            }`}
-            aria-label="Verde"
-          />
-          <button
-            onClick={() => handlePadClick("red")}
-            disabled={status !== "playing"}
-            className={`rounded-tr-full border-4 border-black bg-red-600 transition-all ${
-              activePad === "red"
-                ? "bg-red-300 opacity-100 scale-95 shadow-[0_0_25px_rgba(248,113,113,0.9)]"
-                : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
-            }`}
-            aria-label="Vermelho"
-          />
-          <button
-            onClick={() => handlePadClick("yellow")}
-            disabled={status !== "playing"}
-            className={`rounded-bl-full border-4 border-black bg-amber-500 transition-all ${
-              activePad === "yellow"
-                ? "bg-amber-200 opacity-100 scale-95 shadow-[0_0_25px_rgba(253,230,138,0.9)]"
-                : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
-            }`}
-            aria-label="Amarelo"
-          />
-          <button
-            onClick={() => handlePadClick("blue")}
-            disabled={status !== "playing"}
-            className={`rounded-br-full border-4 border-black bg-blue-600 transition-all ${
-              activePad === "blue"
-                ? "bg-blue-300 opacity-100 scale-95 shadow-[0_0_25px_rgba(147,197,253,0.9)]"
-                : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
-            }`}
-            aria-label="Azul"
-          />
-
-          {/* Center console circle */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 rounded-full border-[6px] border-black bg-white flex flex-col items-center justify-center shadow-[4px_4px_0_0_#000]">
-            <span className="font-display font-black text-lg tracking-wider text-black">
-              GENIUS
-            </span>
-            <span className="font-sans font-black text-xs text-yellow uppercase tracking-widest leading-none mt-0.5">
-              VIP
-            </span>
+          {/* Status display */}
+          <div
+            className={`border-3 px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest mb-6 shadow-[3px_3px_0_0_#000] ${statusDisplay.style}`}
+          >
+            {statusDisplay.text}
           </div>
-        </div>
-      </section>
+
+          {/* Circular board (Ampliado) */}
+          <div
+            className={`relative w-72 h-72 sm:w-[380px] sm:h-[380px] md:w-[440px] md:h-[440px] rounded-full border-[8px] border-black bg-black p-3 grid grid-cols-2 grid-rows-2 gap-3 shadow-[8px_8px_0_0_#000] ${
+              status === "playing" ? "user-turn cursor-pointer" : "pointer-events-none"
+            }`}
+            style={{
+              transform: isFlashingError ? "scale(1.03) rotate(2deg)" : "scale(1)",
+              transition: "transform 0.1s"
+            }}
+          >
+            <button
+              onClick={() => handlePadClick("green")}
+              disabled={status !== "playing"}
+              className={`rounded-tl-full border-4 border-black bg-emerald-600 transition-all cursor-pointer ${
+                activePad === "green"
+                  ? "bg-emerald-300 opacity-100 scale-95 shadow-[0_0_25px_rgba(52,211,153,0.9)]"
+                  : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
+              }`}
+              aria-label="Verde"
+            />
+            <button
+              onClick={() => handlePadClick("red")}
+              disabled={status !== "playing"}
+              className={`rounded-tr-full border-4 border-black bg-red-600 transition-all cursor-pointer ${
+                activePad === "red"
+                  ? "bg-red-300 opacity-100 scale-95 shadow-[0_0_25px_rgba(248,113,113,0.9)]"
+                  : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
+              }`}
+              aria-label="Vermelho"
+            />
+            <button
+              onClick={() => handlePadClick("yellow")}
+              disabled={status !== "playing"}
+              className={`rounded-bl-full border-4 border-black bg-amber-500 transition-all cursor-pointer ${
+                activePad === "yellow"
+                  ? "bg-amber-200 opacity-100 scale-95 shadow-[0_0_25px_rgba(253,230,138,0.9)]"
+                  : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
+              }`}
+              aria-label="Amarelo"
+            />
+            <button
+              onClick={() => handlePadClick("blue")}
+              disabled={status !== "playing"}
+              className={`rounded-br-full border-4 border-black bg-blue-600 transition-all cursor-pointer ${
+                activePad === "blue"
+                  ? "bg-blue-300 opacity-100 scale-95 shadow-[0_0_25px_rgba(147,197,253,0.9)]"
+                  : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
+              }`}
+              aria-label="Azul"
+            />
+
+            {/* Center console circle */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full border-[6px] border-black bg-white flex flex-col items-center justify-center shadow-[4px_4px_0_0_#000]">
+              <span className="font-display font-black text-lg sm:text-xl md:text-2xl tracking-wider text-black">
+                GENIUS
+              </span>
+              <span className="font-sans font-black text-[9px] sm:text-[10px] md:text-xs text-yellow uppercase tracking-widest leading-none mt-0.5">
+                VIP
+              </span>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
   );
