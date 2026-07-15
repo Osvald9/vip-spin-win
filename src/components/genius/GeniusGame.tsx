@@ -343,6 +343,5 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
         </section>
       </div>
     </div>
-  </div>
   );
 }
