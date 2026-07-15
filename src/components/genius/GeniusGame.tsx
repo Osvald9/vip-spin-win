@@ -76,21 +76,19 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
   }, [soundEnabled]);
 
   // Função auxiliar para sleep com Promise
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-  // Determina velocidade de piscada (dificuldade progressiva)
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)  // Determina velocidade de piscada (dificuldade progressiva)
   const getSpeed = useCallback((level: number) => {
-    if (level <= 4) return { duration: 600, gap: 200 };
-    if (level <= 8) return { duration: 450, gap: 150 };
-    if (level <= 12) return { duration: 350, gap: 100 };
-    return { duration: 280, gap: 80 };
+    if (level <= 4) return { duration: 320, gap: 120 };
+    if (level <= 8) return { duration: 250, gap: 90 };
+    if (level <= 12) return { duration: 200, gap: 70 };
+    return { duration: 160, gap: 50 };
   }, []);
 
   // Executa a exibição da sequência de piscadas
   const playSequence = useCallback(async (currentSeq: PadColor[]) => {
     isPlayingSeqRef.current = true;
     setStatus("watching");
-    await sleep(600);
+    await sleep(350); // Reduzido de 600ms para 350ms antes de começar
 
     const { duration, gap } = getSpeed(currentSeq.length);
 
@@ -133,8 +131,8 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
 
     // Flash rápido do clique do jogador
     setActivePad(color);
-    playTone(color, 250);
-    setTimeout(() => setActivePad(null), 200);
+    playTone(color, 160); // Reduzido de 250
+    setTimeout(() => setActivePad(null), 110); // Reduzido de 200
 
     const nextPlayerSeq = [...playerSequence, color];
     setPlayerSequence(nextPlayerSeq);
@@ -162,29 +160,29 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
       setStatus("watching");
       setTimeout(() => {
         addNewStep(sequence);
-      }, 800);
+      }, 500); // Reduzido de 800ms para 500ms
     }
   };
 
   // Game over
   const handleGameOver = () => {
     setStatus("gameover");
-    playTone("error", 1200);
+    playTone("error", 1000);
     setIsFlashingError(true);
-    setTimeout(() => setIsFlashingError(false), 1200);
+    setTimeout(() => setIsFlashingError(false), 1000);
   };
 
   // Classe utilitária do status display
   const getStatusDisplay = () => {
     switch (status) {
       case "idle":
-        return { text: "Clique em Iniciar Jogo!", style: "bg-white border-black text-black" };
+        return { text: "Clique em Iniciar Jogo!", style: "bg-neutral-800 border-neutral-700 text-neutral-200" };
       case "watching":
-        return { text: "Assista à sequência!", style: "bg-primary border-black text-black" };
+        return { text: "Assista à sequência!", style: "bg-yellow border-neutral-800 text-black" };
       case "playing":
-        return { text: "Sua vez! Repita", style: "bg-emerald-400 border-black text-black" };
+        return { text: "Sua vez! Repita", style: "bg-emerald-500 border-neutral-800 text-white" };
       case "gameover":
-        return { text: "Fim de Jogo!", style: "bg-destructive text-destructive-foreground border-black" };
+        return { text: "Fim de Jogo!", style: "bg-red-500 border-neutral-800 text-white" };
     }
   };
 
@@ -195,7 +193,7 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
       {onBack && (
         <button
           onClick={onBack}
-          className="self-start flex items-center gap-2 rounded-xl border-3 border-black bg-white hover:bg-neutral-100 px-4 py-2 text-sm font-black uppercase tracking-wider shadow-[3px_3px_0_0_#000] active:translate-y-[2px] active:shadow-[1px_1px_0_0_#000] transition-all text-black cursor-pointer"
+          className="self-start flex items-center gap-2 rounded-xl border-2 border-black bg-white hover:bg-neutral-100 px-4 py-2 text-sm font-black uppercase tracking-wider shadow-[2px_2px_0_0_#000] active:translate-y-[2px] active:shadow-[1px_1px_0_0_#000] transition-all text-black cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4 stroke-[3]" />
           Voltar para Mini Games
@@ -203,10 +201,10 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
       )}
 
       <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto items-stretch">
-        {/* Placar e Controles (Layout Compacto Vertical/Horizontal) */}
-        <div className="rounded-2xl border-4 border-black bg-white p-4 shadow-[6px_6px_0_0_#000] flex flex-col gap-4">
+        {/* Placar e Controles (Layout Compacto com linhas mais finas) */}
+        <div className="rounded-2xl border-2 border-black bg-white p-4 shadow-[3px_3px_0_0_#000] flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border-3 border-black bg-white p-3 text-center">
+            <div className="rounded-xl border-2 border-black bg-white p-3 text-center">
               <span className="block text-[10px] font-black uppercase tracking-widest text-black/60">
                 Pontos
               </span>
@@ -214,7 +212,7 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
                 {score}
               </span>
             </div>
-            <div className="rounded-xl border-3 border-black bg-yellow/20 p-3 text-center">
+            <div className="rounded-xl border-2 border-black bg-yellow/20 p-3 text-center">
               <span className="block text-[10px] font-black uppercase tracking-widest text-yellow/80">
                 Recorde
               </span>
@@ -229,7 +227,7 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
             <button
               onClick={startGame}
               disabled={status === "watching"}
-              className="btn-yellow btn-yellow-hover py-3.5 text-lg flex items-center justify-center gap-2 rounded-xl disabled:opacity-60 cursor-pointer"
+              className="btn-yellow btn-yellow-hover py-3 text-lg flex items-center justify-center gap-2 rounded-xl border-2 border-black disabled:opacity-60 cursor-pointer"
             >
               {status === "watching" || status === "playing" ? (
                 <>
@@ -243,7 +241,7 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
             </button>
 
             {/* Controle de som */}
-            <div className="flex items-center justify-between border-3 border-black bg-white rounded-xl p-2.5">
+            <div className="flex items-center justify-between border-2 border-black bg-white rounded-xl p-2.5">
               <span className="text-xs font-black uppercase tracking-wide flex items-center gap-1.5 text-black select-none">
                 {soundEnabled ? (
                   <Volume2 className="h-4.5 w-4.5 stroke-[2.5]" />
@@ -266,76 +264,76 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
           </div>
         </div>
 
-        {/* Tabuleiro Ampliado Centrado */}
+        {/* Tabuleiro Sleek Arcade Dark */}
         <section
-          className={`rounded-3xl border-6 border-black bg-yellow p-4 sm:p-8 shadow-[8px_8px_0_0_#000] flex flex-col items-center justify-center min-h-[380px] sm:min-h-[480px] transition-colors duration-150 ${
-            isFlashingError ? "bg-red-400" : ""
+          className={`rounded-3xl border-2 border-black bg-neutral-950 p-4 sm:p-8 shadow-[4px_4px_0_0_#000] flex flex-col items-center justify-center min-h-[380px] sm:min-h-[480px] transition-colors duration-150 ${
+            isFlashingError ? "bg-red-950/80 border-red-800" : ""
           }`}
         >
           {/* Status display */}
           <div
-            className={`border-3 px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest mb-6 shadow-[3px_3px_0_0_#000] ${statusDisplay.style}`}
+            className={`border-2 px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest mb-6 shadow-[2px_2px_0_0_#000] ${statusDisplay.style}`}
           >
             {statusDisplay.text}
           </div>
 
-          {/* Circular board (Ampliado) */}
+          {/* Circular board (Modern Glow Ring) */}
           <div
-            className={`relative w-72 h-72 sm:w-[380px] sm:h-[380px] md:w-[440px] md:h-[440px] rounded-full border-[8px] border-black bg-black p-3 grid grid-cols-2 grid-rows-2 gap-3 shadow-[8px_8px_0_0_#000] ${
+            className={`relative w-72 h-72 sm:w-[380px] sm:h-[380px] md:w-[440px] md:h-[440px] rounded-full border-4 border-neutral-800 bg-neutral-900 p-3 grid grid-cols-2 grid-rows-2 gap-3 shadow-2xl ${
               status === "playing" ? "user-turn cursor-pointer" : "pointer-events-none"
             }`}
             style={{
-              transform: isFlashingError ? "scale(1.03) rotate(2deg)" : "scale(1)",
+              transform: isFlashingError ? "scale(1.02) rotate(1deg)" : "scale(1)",
               transition: "transform 0.1s"
             }}
           >
             <button
               onClick={() => handlePadClick("green")}
               disabled={status !== "playing"}
-              className={`rounded-tl-full border-4 border-black bg-emerald-600 transition-all cursor-pointer ${
+              className={`rounded-tl-full border-2 border-neutral-800 bg-emerald-600 transition-all cursor-pointer ${
                 activePad === "green"
-                  ? "bg-emerald-300 opacity-100 scale-95 shadow-[0_0_25px_rgba(52,211,153,0.9)]"
-                  : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
+                  ? "bg-emerald-400 opacity-100 scale-95 shadow-[0_0_30px_rgba(52,211,153,0.9)] border-emerald-300"
+                  : "opacity-30 hover:opacity-50 disabled:hover:opacity-30"
               }`}
               aria-label="Verde"
             />
             <button
               onClick={() => handlePadClick("red")}
               disabled={status !== "playing"}
-              className={`rounded-tr-full border-4 border-black bg-red-600 transition-all cursor-pointer ${
+              className={`rounded-tr-full border-2 border-neutral-800 bg-red-600 transition-all cursor-pointer ${
                 activePad === "red"
-                  ? "bg-red-300 opacity-100 scale-95 shadow-[0_0_25px_rgba(248,113,113,0.9)]"
-                  : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
+                  ? "bg-red-400 opacity-100 scale-95 shadow-[0_0_30px_rgba(248,113,113,0.9)] border-red-300"
+                  : "opacity-30 hover:opacity-50 disabled:hover:opacity-30"
               }`}
               aria-label="Vermelho"
             />
             <button
               onClick={() => handlePadClick("yellow")}
               disabled={status !== "playing"}
-              className={`rounded-bl-full border-4 border-black bg-amber-500 transition-all cursor-pointer ${
+              className={`rounded-bl-full border-2 border-neutral-800 bg-amber-500 transition-all cursor-pointer ${
                 activePad === "yellow"
-                  ? "bg-amber-200 opacity-100 scale-95 shadow-[0_0_25px_rgba(253,230,138,0.9)]"
-                  : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
+                  ? "bg-amber-300 opacity-100 scale-95 shadow-[0_0_30px_rgba(253,230,138,0.9)] border-amber-200"
+                  : "opacity-30 hover:opacity-50 disabled:hover:opacity-30"
               }`}
               aria-label="Amarelo"
             />
             <button
               onClick={() => handlePadClick("blue")}
               disabled={status !== "playing"}
-              className={`rounded-br-full border-4 border-black bg-blue-600 transition-all cursor-pointer ${
+              className={`rounded-br-full border-2 border-neutral-800 bg-blue-600 transition-all cursor-pointer ${
                 activePad === "blue"
-                  ? "bg-blue-300 opacity-100 scale-95 shadow-[0_0_25px_rgba(147,197,253,0.9)]"
-                  : "opacity-40 hover:opacity-60 disabled:hover:opacity-40"
+                  ? "bg-blue-400 opacity-100 scale-95 shadow-[0_0_30px_rgba(147,197,253,0.9)] border-blue-300"
+                  : "opacity-30 hover:opacity-50 disabled:hover:opacity-30"
               }`}
               aria-label="Azul"
             />
 
             {/* Center console circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full border-[6px] border-black bg-white flex flex-col items-center justify-center shadow-[4px_4px_0_0_#000]">
-              <span className="font-display font-black text-lg sm:text-xl md:text-2xl tracking-wider text-black">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full border-4 border-neutral-800 bg-neutral-900 flex flex-col items-center justify-center shadow-2xl select-none">
+              <span className="font-display font-black text-lg sm:text-xl md:text-2xl tracking-wider text-neutral-100">
                 GENIUS
               </span>
-              <span className="font-sans font-black text-[9px] sm:text-[10px] md:text-xs text-yellow uppercase tracking-widest leading-none mt-0.5">
+              <span className="font-sans font-black text-[9px] sm:text-[10px] md:text-xs text-yellow uppercase tracking-widest leading-none mt-0.5 animate-pulse">
                 VIP
               </span>
             </div>
