@@ -76,7 +76,7 @@ export function GeniusGame({ onBack }: GeniusGameProps) {
   }, [soundEnabled]);
 
   // Função auxiliar para sleep com Promise
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)  // Determina velocidade de piscada (dificuldade progressiva)
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   const getSpeed = useCallback((level: number) => {
     if (level <= 4) return { duration: 320, gap: 120 };
     if (level <= 8) return { duration: 250, gap: 90 };
