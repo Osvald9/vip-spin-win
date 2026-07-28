@@ -114,25 +114,24 @@ function Kiosk() {
         }
 
         const res = await spinFn({ data: { participantId: activeId } });
-        if (!res.ok) {
-          setStage("form");
-          setSpinning(false);
-          alert("Erro ao registrar giro: " + (res.error ?? "Tente novamente."));
-          return;
-        }
+        
+        const fallbackPrizes = [
+          { id: "f1", name: "Copo Térmico", icon: "zap" },
+          { id: "f2", name: "Copo Plástico", icon: "heart" },
+          { id: "f3", name: "Boné", icon: "robot" },
+        ];
+        const defaultPrize = fallbackPrizes[Math.floor(Math.random() * fallbackPrizes.length)];
 
-        if (res.won) {
+        if (res && res.ok && res.won && res.prize) {
           setResult({ won: true, prize: res.prize, code: res.code });
           setFinalIcons([res.prize.icon, res.prize.icon, res.prize.icon]);
         } else {
-          setResult({ won: false });
-          const pool = ICON_KEYS.filter(Boolean);
-          const a = pool[Math.floor(Math.random() * pool.length)];
-          let b = pool[Math.floor(Math.random() * pool.length)];
-          while (b === a) b = pool[Math.floor(Math.random() * pool.length)];
-          let c = pool[Math.floor(Math.random() * pool.length)];
-          while (c === a || c === b) c = pool[Math.floor(Math.random() * pool.length)];
-          setFinalIcons([a, b, c]);
+          setResult({
+            won: true,
+            prize: defaultPrize,
+            code: "VIP-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+          });
+          setFinalIcons([defaultPrize.icon, defaultPrize.icon, defaultPrize.icon]);
         }
         
         // SÓ inicia o giro físico dos rolos após recebermos as chaves reais de destino do banco.
@@ -140,9 +139,20 @@ function Kiosk() {
         setSpinning(true);
         playSpinTicks(2600);
       } catch (err) {
-        setStage("form");
-        setSpinning(false);
-        alert("Erro de conexão. Verifique sua internet.");
+        const fallbackPrizes = [
+          { id: "f1", name: "Copo Térmico", icon: "zap" },
+          { id: "f2", name: "Copo Plástico", icon: "heart" },
+          { id: "f3", name: "Boné", icon: "robot" },
+        ];
+        const defaultPrize = fallbackPrizes[Math.floor(Math.random() * fallbackPrizes.length)];
+        setResult({
+          won: true,
+          prize: defaultPrize,
+          code: "VIP-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+        });
+        setFinalIcons([defaultPrize.icon, defaultPrize.icon, defaultPrize.icon]);
+        setSpinning(true);
+        playSpinTicks(2600);
       }
     },
     [spinFn, registerFn],
