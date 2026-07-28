@@ -75,23 +75,14 @@ function Kiosk() {
 
   const runTestSpin = useCallback(() => {
     setStage("spinning");
-    // 10% chance de perder no modo teste
-    const lose = Math.random() < 0.10 || testPool.length === 0;
-    if (lose) {
-      setResult({ won: false });
-      // Garante sempre 3 ícones DISTINTOS para não confundir com combinação vencedora
-      const pool = ICON_KEYS.filter(Boolean);
-      const a = pool[Math.floor(Math.random() * pool.length)];
-      let b = pool[Math.floor(Math.random() * pool.length)];
-      while (b === a) b = pool[Math.floor(Math.random() * pool.length)];
-      let c = pool[Math.floor(Math.random() * pool.length)];
-      while (c === a || c === b) c = pool[Math.floor(Math.random() * pool.length)];
-      setFinalIcons([a, b, c]);
-    } else {
-      const p = testPool[Math.floor(Math.random() * testPool.length)];
-      setResult({ won: true, prize: { id: p.id, name: p.name, icon: p.icon }, code: "TESTE-000000" });
-      setFinalIcons([p.icon, p.icon, p.icon]);
-    }
+    const pool = testPool.length > 0 ? testPool : [
+      { id: "1", name: "Copo Térmico", icon: "zap" },
+      { id: "2", name: "Copo Plástico", icon: "heart" },
+      { id: "3", name: "Boné", icon: "robot" },
+    ];
+    const p = pool[Math.floor(Math.random() * pool.length)];
+    setResult({ won: true, prize: { id: p.id, name: p.name, icon: p.icon }, code: "TESTE-000000" });
+    setFinalIcons([p.icon, p.icon, p.icon]);
     settleCount.current = 0;
     setSpinning(true);
     playSpinTicks(2600);

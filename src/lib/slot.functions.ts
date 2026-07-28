@@ -265,61 +265,37 @@ export const spinSlot = createServerFn({ method: "POST" })
         return { ok: false as const, error: "Você já jogou nesta ativação." };
       }
 
-      const prizes = await db.readPrizes();
-      const pool = prizes.filter((p: any) => p.active && p.remaining_quantity > 0);
-      const totalWeight = pool.reduce((s: number, p: any) => s + Math.max(1, p.weight), 0);
+      const pool = [
+        { id: "1", name: "Copo Térmico", icon: "zap", weight: 30 },
+        { id: "2", name: "Copo Plástico", icon: "heart", weight: 50 },
+        { id: "3", name: "Boné", icon: "robot", weight: 20 },
+      ];
+      const totalWeight = pool.reduce((s: number, p: any) => s + p.weight, 0);
 
-      let winner: any = null;
-      if (pool.length > 0) {
-        // 10% chance of losing
-        const rollLoss = Math.random();
-        const shouldWin = rollLoss >= 0.10;
-
-        if (shouldWin) {
-          const roll = Math.random() * totalWeight;
-          let acc = 0;
-          for (const p of pool) {
-            acc += Math.max(1, p.weight);
-            if (roll <= acc) {
-              winner = p;
-              break;
-            }
-          }
+      const roll = Math.random() * totalWeight;
+      let acc = 0;
+      let winner = pool[0];
+      for (const p of pool) {
+        acc += p.weight;
+        if (roll <= acc) {
+          winner = p;
+          break;
         }
       }
 
-      if (winner) {
-        // Decrement quantity locally
-        const targetPrize = prizes.find((p: any) => p.id === winner.id);
-        if (targetPrize && targetPrize.remaining_quantity > 0) {
-          targetPrize.remaining_quantity -= 1;
-          if (targetPrize.remaining_quantity <= 0) {
-            targetPrize.active = false;
-          }
-          await db.writePrizes(prizes);
-        } else {
-          winner = null;
-        }
-      }
-
-      if (winner) {
-        const code = generateCode();
-        participant.prize_id = winner.id;
-        participant.prize_name = winner.name;
-        participant.redemption_code = code;
-        participant.won = true;
-        await db.writeParticipants(participants);
-        return {
-          ok: true as const,
-          won: true as const,
-          prize: { id: winner.id, name: winner.name, icon: winner.icon },
-          code,
-        };
-      }
-
-      participant.won = false;
+      const code = generateCode();
+      participant.prize_id = winner.id;
+      participant.prize_name = winner.name;
+      participant.redemption_code = code;
+      participant.won = true;
       await db.writeParticipants(participants);
-      return { ok: true as const, won: false as const };
+
+      return {
+        ok: true as const,
+        won: true as const,
+        prize: { id: winner.id, name: winner.name, icon: winner.icon },
+        code,
+      };
     }
   });
 
