@@ -123,10 +123,15 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
 
   async function refresh() {
     setLoading(true);
-    const res = await listAll({ data: { pin } });
-    setPrizes(res.prizes as Prize[]);
-    setParticipants(res.participants as Participant[]);
-    setLoading(false);
+    try {
+      const res = await listAll({ data: { pin } });
+      setPrizes(res.prizes as Prize[]);
+      setParticipants(res.participants as Participant[]);
+    } catch (e: any) {
+      alert("Erro ao carregar dados: " + e.message);
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => {
     void refresh();
@@ -134,19 +139,23 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
   }, []);
 
   async function save(p: Partial<Prize> & { id?: string }) {
-    await upsert({
-      data: {
-        pin,
-        id: p.id,
-        name: p.name ?? "",
-        icon: p.icon ?? "gift",
-        total_quantity: p.total_quantity ?? 0,
-        remaining_quantity: p.remaining_quantity ?? 0,
-        weight: p.weight ?? 10,
-        active: p.active ?? true,
-      },
-    });
-    await refresh();
+    try {
+      await upsert({
+        data: {
+          pin,
+          id: p.id,
+          name: p.name ?? "",
+          icon: p.icon ?? "gift",
+          total_quantity: p.total_quantity ?? 0,
+          remaining_quantity: p.remaining_quantity ?? 0,
+          weight: p.weight ?? 10,
+          active: p.active ?? true,
+        },
+      });
+      await refresh();
+    } catch (e: any) {
+      alert("Erro ao salvar prêmio: " + e.message);
+    }
   }
   async function remove(id: string) {
     if (!confirm("Excluir este prêmio?")) return;

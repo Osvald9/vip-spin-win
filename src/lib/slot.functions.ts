@@ -416,9 +416,13 @@ export const adminUpsertPrize = createServerFn({ method: "POST" })
         active: data.active,
       };
       if (data.id) {
-        await supabase.from("prizes").update(payload).eq("id", data.id);
+        const { error } = await supabase.from("prizes").update(payload).eq("id", data.id);
+        if (error) throw new Error(`Update error: ${error.message}`);
       } else {
-        await supabase.from("prizes").insert(payload);
+        const crypto = await import("crypto");
+        const insertPayload = { id: crypto.randomUUID(), ...payload };
+        const { error } = await supabase.from("prizes").insert(insertPayload);
+        if (error) throw new Error(`Insert error: ${error.message}`);
       }
       return { ok: true };
     } else {
@@ -463,7 +467,8 @@ export const adminDeletePrize = createServerFn({ method: "POST" })
     checkPin(data.pin);
     if (shouldUseSupabase()) {
       const supabase = await loadAdmin();
-      await supabase.from("prizes").delete().eq("id", data.id);
+      const { error } = await supabase.from("prizes").delete().eq("id", data.id);
+      if (error) throw new Error(error.message);
       return { ok: true };
     } else {
       const db = await getLocalDatabase();
@@ -489,7 +494,8 @@ export const adminDeleteParticipant = createServerFn({ method: "POST" })
         .single();
 
       // Deleta o participante
-      await supabase.from("participants").delete().eq("id", data.id);
+      const { error: delError } = await supabase.from("participants").delete().eq("id", data.id);
+      if (delError) throw new Error(delError.message);
 
       // Se ele tinha ganho um brinde, estorna/devolve +1 no estoque dele
       if (part?.won && part?.prize_id) {

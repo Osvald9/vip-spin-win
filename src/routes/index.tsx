@@ -8,8 +8,6 @@ import { registerParticipant, spinSlot, listActivePrizes } from "@/lib/slot.func
 import { SlotReel } from "@/components/slot/SlotReel";
 import { SlotIcon, ICON_KEYS } from "@/components/slot/SlotIcon";
 import { playSpinTicks, playWin, playLose } from "@/lib/slot-sound";
-import { GeniusGame } from "@/components/genius/GeniusGame";
-
 const TEST_MODE = false; // Modo de teste desativado — cadastro obrigatório antes de girar
 
 export const Route = createFileRoute("/")({
@@ -37,8 +35,6 @@ type SpinResult =
   | { won: false };
 
 function Kiosk() {
-  const [activeTab, setActiveTab] = useState<"slot" | "minigames">("slot");
-  const [selectedGame, setSelectedGame] = useState<"genius" | null>(null);
   const [stage, setStage] = useState<Stage>("form");
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [result, setResult] = useState<SpinResult | null>(null);
@@ -200,61 +196,22 @@ function Kiosk() {
     <div className="min-h-screen w-full bg-white text-black">
       <TopBar />
 
-      {/* Navegação de Abas Brutalista */}
-      <div className="mx-auto flex max-w-3xl gap-3 px-4 pb-2 justify-center">
-        <button
-          onClick={() => setActiveTab("slot")}
-          className={`rounded-xl px-5 py-2.5 text-sm font-black uppercase tracking-wider border-3 border-black transition-all ${
-            activeTab === "slot"
-              ? "bg-yellow shadow-[4px_4px_0_0_#000]"
-              : "bg-white hover:bg-neutral-100 shadow-[2px_2px_0_0_#000] active:translate-y-[2px]"
-          }`}
-        >
-          Caça-Níquel
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab("minigames");
-            setSelectedGame(null);
-          }}
-          className={`rounded-xl px-5 py-2.5 text-sm font-black uppercase tracking-wider border-3 border-black transition-all ${
-            activeTab === "minigames"
-              ? "bg-yellow shadow-[4px_4px_0_0_#000]"
-              : "bg-white hover:bg-neutral-100 shadow-[2px_2px_0_0_#000] active:translate-y-[2px]"
-          }`}
-        >
-          Mini Games
-        </button>
-      </div>
-
       <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pb-10 pt-4">
-        {activeTab === "slot" ? (
-          <>
-            <RegistrationForm
-              disabled={stage !== "form" || !!participantId}
-              participantReady={!!participantId}
-              onDone={(id) => setParticipantId(id)}
-              onTestMiniGame={() => {
-                setActiveTab("minigames");
-                setSelectedGame("genius");
-              }}
-            />
+        <RegistrationForm
+          disabled={stage !== "form" || !!participantId}
+          participantReady={!!participantId}
+          onDone={(id) => setParticipantId(id)}
+        />
 
-            <SlotBoard
-              spinning={spinning}
-              finalIcons={finalIcons}
-              onReelSettle={onReelSettle}
-              canSpin={(TEST_MODE || !!participantId) && stage === "form"}
-              isSpinning={stage === "spinning"}
-              onSpin={() => handleSpin(participantId)}
-              testMode={TEST_MODE && !participantId}
-            />
-          </>
-        ) : selectedGame === "genius" ? (
-          <GeniusGame onBack={() => setSelectedGame(null)} />
-        ) : (
-          <MiniGamesMenu onSelectGame={(game) => setSelectedGame(game)} />
-        )}
+        <SlotBoard
+          spinning={spinning}
+          finalIcons={finalIcons}
+          onReelSettle={onReelSettle}
+          canSpin={(TEST_MODE || !!participantId) && stage === "form"}
+          isSpinning={stage === "spinning"}
+          onSpin={() => handleSpin(participantId)}
+          testMode={TEST_MODE && !participantId}
+        />
       </div>
       {/* Link invisível para o painel admin no canto inferior direito */}
       <Link
@@ -289,12 +246,10 @@ function RegistrationForm({
   onDone,
   disabled,
   participantReady,
-  onTestMiniGame,
 }: {
   onDone: (id: string) => void;
   disabled: boolean;
   participantReady: boolean;
-  onTestMiniGame: () => void;
 }) {
   const register = useServerFn(registerParticipant);
   const [fullName, setName] = useState("");
@@ -413,14 +368,6 @@ function RegistrationForm({
             ) : (
               "Cadastrar e liberar giro"
             )}
-          </button>
-
-          <button
-            type="button"
-            onClick={onTestMiniGame}
-            className="w-full rounded-2xl border-3 border-black bg-neutral-100 hover:bg-neutral-200 py-3 text-sm font-black uppercase tracking-wider transition-all text-black cursor-pointer shadow-[3px_3px_0_0_#000] active:translate-y-[2px] active:shadow-[1px_1px_0_0_#000]"
-          >
-            Apenas Testar Mini Games (Genius)
           </button>
         </div>
       )}
@@ -633,102 +580,4 @@ function fireConfetti() {
   confetti({ particleCount: 120, spread: 100, origin: { y: 0.5 }, colors });
 }
 
-function MiniGamesMenu({ onSelectGame }: { onSelectGame: (game: "genius") => void }) {
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="rounded-2xl border-4 border-black bg-white p-6 shadow-[6px_6px_0_0_#000]">
-        <h2 className="text-3xl font-black uppercase tracking-tight text-black flex items-center gap-2">
-          <Gamepad2 className="h-8 w-8 stroke-[3]" />
-          Arena de Mini Games
-        </h2>
-        <p className="text-sm font-bold text-black/60 mt-1 uppercase tracking-wider">
-          Escolha um jogo para testar suas habilidades enquanto se diverte!
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Game 1: Genius */}
-        <div
-          onClick={() => onSelectGame("genius")}
-          className="group rounded-3xl border-4 border-black bg-yellow p-6 shadow-[6px_6px_0_0_#000] hover:shadow-[8px_8px_0_0_#000] active:translate-y-[2px] active:shadow-[4px_4px_0_0_#000] transition-all cursor-pointer flex flex-col justify-between min-h-[220px]"
-        >
-          <div>
-            <div className="flex justify-between items-start">
-              <span className="rounded-full border-2 border-black bg-white px-3 py-1 text-xs font-black uppercase tracking-widest text-black">
-                Memória
-              </span>
-              <Brain className="h-8 w-8 text-black stroke-[2.5]" />
-            </div>
-            <h3 className="text-2xl font-black uppercase text-black mt-4">
-              Genius VIP
-            </h3>
-            <p className="text-sm font-bold text-black/80 mt-2">
-              Teste sua memória repetindo as sequências de cores e sons que aumentam a cada rodada!
-            </p>
-          </div>
-          <div className="mt-6 flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-widest text-black/60">
-              Disponível
-            </span>
-            <button className="flex items-center gap-1 bg-black text-white border-2 border-black px-4 py-2 font-black text-xs uppercase tracking-wider rounded-xl hover:bg-neutral-800 transition-colors cursor-pointer">
-              <Play className="h-3 w-3 fill-current" /> Jogar
-            </button>
-          </div>
-        </div>
-
-        {/* Game 2: Tic Tac Toe (Coming Soon) */}
-        <div className="rounded-3xl border-4 border-black bg-neutral-100 p-6 shadow-[6px_6px_0_0_#000] opacity-75 flex flex-col justify-between min-h-[220px]">
-          <div>
-            <div className="flex justify-between items-start">
-              <span className="rounded-full border-2 border-black bg-neutral-200 px-3 py-1 text-xs font-black uppercase tracking-widest text-neutral-500">
-                Estratégia
-              </span>
-              <Lock className="h-8 w-8 text-neutral-400 stroke-[2.5]" />
-            </div>
-            <h3 className="text-2xl font-black uppercase text-neutral-400 mt-4">
-              Jogo da Velha
-            </h3>
-            <p className="text-sm font-medium text-neutral-500 mt-2">
-              Desafie a máquina em um clássico jogo da velha. Mostre quem é o mestre da estratégia!
-            </p>
-          </div>
-          <div className="mt-6 flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-widest text-neutral-400">
-              Bloqueado
-            </span>
-            <span className="rounded-xl border-2 border-dashed border-neutral-300 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-neutral-400">
-              Em breve
-            </span>
-          </div>
-        </div>
-
-        {/* Game 3: Memory Game (Coming Soon) */}
-        <div className="rounded-3xl border-4 border-black bg-neutral-100 p-6 shadow-[6px_6px_0_0_#000] opacity-75 flex flex-col justify-between min-h-[220px]">
-          <div>
-            <div className="flex justify-between items-start">
-              <span className="rounded-full border-2 border-black bg-neutral-200 px-3 py-1 text-xs font-black uppercase tracking-widest text-neutral-500">
-                Atenção
-              </span>
-              <Lock className="h-8 w-8 text-neutral-400 stroke-[2.5]" />
-            </div>
-            <h3 className="text-2xl font-black uppercase text-neutral-400 mt-4">
-              Jogo da Memória
-            </h3>
-            <p className="text-sm font-medium text-neutral-500 mt-2">
-              Encontre os pares de símbolos idênticos do caça-níquel antes que o tempo acabe!
-            </p>
-          </div>
-          <div className="mt-6 flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-widest text-neutral-400">
-              Bloqueado
-            </span>
-            <span className="rounded-xl border-2 border-dashed border-neutral-300 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-neutral-400">
-              Em breve
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
