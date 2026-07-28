@@ -174,12 +174,14 @@ export const registerParticipant = createServerFn({ method: "POST" })
 export const listActivePrizes = createServerFn({ method: "GET" }).handler(async () => {
   if (shouldUseSupabase()) {
     const supabase = await loadAdmin();
-    const { data } = await supabase
-      .from("prizes")
-      .select("id,name,icon,remaining_quantity,active")
-      .eq("active", true)
-      .order("name");
-    return { prizes: data ?? [] };
+    // Provisório: Retorna prêmios fixos conforme solicitado
+    return { 
+      prizes: [
+        { id: "temp-copo-termico", name: "Copo Térmico", icon: "zap", remaining_quantity: 999, active: true },
+        { id: "temp-copo-plastico", name: "Copo Plástico", icon: "heart", remaining_quantity: 999, active: true },
+        { id: "temp-bone", name: "Boné", icon: "robot", remaining_quantity: 999, active: true },
+      ] 
+    };
   } else {
     const db = await getLocalDatabase();
     const prizes = await db.readPrizes();
@@ -212,71 +214,48 @@ export const spinSlot = createServerFn({ method: "POST" })
         return { ok: false as const, error: "Você já jogou nesta ativação." };
       }
 
-      const { data: prizes } = await supabase
-        .from("prizes")
-        .select("id,name,icon,remaining_quantity,weight,active")
-        .eq("active", true)
-        .gt("remaining_quantity", 0);
+      // Provisório: Prêmios hardcoded e 100% de chance de ganhar
+      const pool = [
+        { name: "Copo Térmico", icon: "zap", weight: 30 },
+        { name: "Copo Plástico", icon: "heart", weight: 50 },
+        { name: "Boné", icon: "robot", weight: 20 },
+      ];
 
-      const pool = prizes ?? [];
-      const totalWeight = pool.reduce((s, p) => s + Math.max(1, p.weight), 0);
-
-      let winner: (typeof pool)[number] | null = null;
-      if (pool.length > 0) {
-        // 10% chance of losing
-        const rollLoss = Math.random();
-        const shouldWin = rollLoss >= 0.10;
-
-        if (shouldWin) {
-          const roll = Math.random() * totalWeight;
-          let acc = 0;
-          for (const p of pool) {
-            acc += Math.max(1, p.weight);
-            if (roll <= acc) {
-              winner = p;
-              break;
-            }
-          }
+      const totalWeight = pool.reduce((s, p) => s + p.weight, 0);
+      const roll = Math.random() * totalWeight;
+      let acc = 0;
+      let winner = pool[0];
+      
+      for (const p of pool) {
+        acc += p.weight;
+        if (roll <= acc) {
+          winner = p;
+          break;
         }
       }
 
-      if (winner) {
-        // Atomic decrement guard
-        const { data: dec } = await supabase
-          .from("prizes")
-          .update({ remaining_quantity: winner.remaining_quantity - 1 })
-          .eq("id", winner.id)
-          .gt("remaining_quantity", 0)
-          .select()
-          .maybeSingle();
-        if (!dec) winner = null;
-        else if (dec.remaining_quantity <= 0) {
-          // auto-close prize
-          await supabase.from("prizes").update({ active: false }).eq("id", winner.id);
-        }
+      const code = generateCode();
+      
+      const { error: updateError } = await supabase
+        .from("participants")
+        .update({
+          prize_id: null,
+          prize_name: winner.name,
+          redemption_code: code,
+          won: true,
+        })
+        .eq("id", data.participantId);
+        
+      if (updateError) {
+        return { ok: false as const, error: "Erro ao registrar o prêmio. Tente novamente." };
       }
 
-      if (winner) {
-        const code = generateCode();
-        await supabase
-          .from("participants")
-          .update({
-            prize_id: winner.id,
-            prize_name: winner.name,
-            redemption_code: code,
-            won: true,
-          })
-          .eq("id", data.participantId);
-        return {
-          ok: true as const,
-          won: true as const,
-          prize: { id: winner.id, name: winner.name, icon: winner.icon },
-          code,
-        };
-      }
-
-      await supabase.from("participants").update({ won: false }).eq("id", data.participantId);
-      return { ok: true as const, won: false as const };
+      return {
+        ok: true as const,
+        won: true as const,
+        prize: { id: "temp-" + Date.now(), name: winner.name, icon: winner.icon },
+        code,
+      };
     } else {
       const db = await getLocalDatabase();
       const participants = await db.readParticipants();
@@ -367,10 +346,12 @@ export const adminListAll = createServerFn({ method: "POST" })
     checkPin(data.pin);
     if (shouldUseSupabase()) {
       const supabase = await loadAdmin();
-      const [{ data: prizes }, { data: participants }] = await Promise.all([
+      const [{ data: prizes, error: prizesError }, { data: participants, error: partsError }] = await Promise.all([
         supabase.from("prizes").select("*").order("created_at"),
         supabase.from("participants").select("*").order("created_at", { ascending: false }),
       ]);
+      if (prizesError) throw new Error("Erro ao carregar prêmios: " + prizesError.message);
+      if (partsError) throw new Error("Erro ao carregar participantes: " + partsError.message);
       return { prizes: prizes ?? [], participants: participants ?? [] };
     } else {
       const db = await getLocalDatabase();
