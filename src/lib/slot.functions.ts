@@ -20,9 +20,53 @@ function generateCode() {
   return out;
 }
 
+const globalStore = globalThis as unknown as {
+  prizes?: any[];
+  participants?: any[];
+};
+
+function getInitialPrizes() {
+  return [
+    {
+      id: "1647a8fb-0863-49d6-b8db-bd4f6a7d8bb1",
+      name: "Copo Térmico",
+      icon: "zap",
+      total_quantity: 50,
+      remaining_quantity: 50,
+      weight: 30,
+      active: true,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: "2747a8fb-0863-49d6-b8db-bd4f6a7d8bb2",
+      name: "Copo Plástico",
+      icon: "heart",
+      total_quantity: 100,
+      remaining_quantity: 100,
+      weight: 50,
+      active: true,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: "3847a8fb-0863-49d6-b8db-bd4f6a7d8bb3",
+      name: "Boné",
+      icon: "robot",
+      total_quantity: 30,
+      remaining_quantity: 30,
+      weight: 20,
+      active: true,
+      created_at: new Date().toISOString(),
+    },
+  ];
+}
+
 // Check database configuration
 function shouldUseSupabase() {
-  return !!process.env.SUPABASE_URL;
+  const url = process.env.SUPABASE_URL;
+  if (!url) return false;
+  // Ignore invalid/dead project host that causes TypeError: fetch failed
+  if (url.includes("mdfbfkkwcrquumsghvun")) return false;
+  return true;
 }
 
 async function loadAdmin() {
@@ -30,72 +74,56 @@ async function loadAdmin() {
   return supabaseAdmin;
 }
 
-// Local JSON File Database Helpers
+// Local JSON File & Memory Database Helpers
 async function getLocalDatabase() {
-  const fs = await import("fs/promises");
-  const path = await import("path");
-  
-  const DATA_DIR = path.resolve(process.cwd(), "data");
-  const PRIZES_FILE = path.join(DATA_DIR, "prizes.json");
-  const PARTICIPANTS_FILE = path.join(DATA_DIR, "participants.json");
+  if (!globalStore.prizes) globalStore.prizes = getInitialPrizes();
+  if (!globalStore.participants) globalStore.participants = [];
 
-  // Ensure directories exist
   try {
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    
+    const DATA_DIR = path.resolve(process.cwd(), "data");
+    const PRIZES_FILE = path.join(DATA_DIR, "prizes.json");
+    const PARTICIPANTS_FILE = path.join(DATA_DIR, "participants.json");
+
     await fs.mkdir(DATA_DIR, { recursive: true });
-  } catch {}
 
-  // Check and seed prizes if they don't exist
-  try {
-    await fs.access(PRIZES_FILE);
-  } catch {
-    const defaultPrizes = [
-      {
-        id: "1647a8fb-0863-49d6-b8db-bd4f6a7d8bb1",
-        name: "Copo Térmico",
-        icon: "zap",
-        total_quantity: 50,
-        remaining_quantity: 50,
-        weight: 30,
-        active: true,
-        created_at: new Date().toISOString(),
+    try {
+      const content = await fs.readFile(PRIZES_FILE, "utf-8");
+      globalStore.prizes = JSON.parse(content);
+    } catch {
+      await fs.writeFile(PRIZES_FILE, JSON.stringify(globalStore.prizes, null, 2), "utf-8");
+    }
+
+    try {
+      const content = await fs.readFile(PARTICIPANTS_FILE, "utf-8");
+      globalStore.participants = JSON.parse(content);
+    } catch {
+      await fs.writeFile(PARTICIPANTS_FILE, JSON.stringify(globalStore.participants, null, 2), "utf-8");
+    }
+
+    return {
+      readPrizes: async () => globalStore.prizes ?? getInitialPrizes(),
+      writePrizes: async (data: any) => {
+        globalStore.prizes = data;
+        try { await fs.writeFile(PRIZES_FILE, JSON.stringify(data, null, 2), "utf-8"); } catch {}
       },
-      {
-        id: "2747a8fb-0863-49d6-b8db-bd4f6a7d8bb2",
-        name: "Copo Plástico",
-        icon: "heart",
-        total_quantity: 100,
-        remaining_quantity: 100,
-        weight: 50,
-        active: true,
-        created_at: new Date().toISOString(),
+      readParticipants: async () => globalStore.participants ?? [],
+      writeParticipants: async (data: any) => {
+        globalStore.participants = data;
+        try { await fs.writeFile(PARTICIPANTS_FILE, JSON.stringify(data, null, 2), "utf-8"); } catch {}
       },
-      {
-        id: "3847a8fb-0863-49d6-b8db-bd4f6a7d8bb3",
-        name: "Boné",
-        icon: "robot",
-        total_quantity: 30,
-        remaining_quantity: 30,
-        weight: 20,
-        active: true,
-        created_at: new Date().toISOString(),
-      },
-    ];
-    await fs.writeFile(PRIZES_FILE, JSON.stringify(defaultPrizes, null, 2), "utf-8");
+    };
+  } catch (err) {
+    // Memory fallback for serverless read-only environments
+    return {
+      readPrizes: async () => globalStore.prizes ?? getInitialPrizes(),
+      writePrizes: async (data: any) => { globalStore.prizes = data; },
+      readParticipants: async () => globalStore.participants ?? [],
+      writeParticipants: async (data: any) => { globalStore.participants = data; },
+    };
   }
-
-  // Check and seed participants if they don't exist
-  try {
-    await fs.access(PARTICIPANTS_FILE);
-  } catch {
-    await fs.writeFile(PARTICIPANTS_FILE, JSON.stringify([], null, 2), "utf-8");
-  }
-
-  return {
-    readPrizes: async () => JSON.parse(await fs.readFile(PRIZES_FILE, "utf-8")),
-    writePrizes: async (data: any) => await fs.writeFile(PRIZES_FILE, JSON.stringify(data, null, 2), "utf-8"),
-    readParticipants: async () => JSON.parse(await fs.readFile(PARTICIPANTS_FILE, "utf-8")),
-    writeParticipants: async (data: any) => await fs.writeFile(PARTICIPANTS_FILE, JSON.stringify(data, null, 2), "utf-8"),
-  };
 }
 
 export const registerParticipant = createServerFn({ method: "POST" })
