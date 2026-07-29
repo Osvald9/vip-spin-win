@@ -121,8 +121,8 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"prizes" | "participants">("prizes");
 
-  async function refresh() {
-    setLoading(true);
+  async function refresh(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const res = await listAll({ data: { pin } });
       setPrizes(res.prizes as Prize[]);
@@ -130,7 +130,7 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
     } catch (e: any) {
       alert("Erro ao carregar dados: " + e.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
   useEffect(() => {
@@ -152,7 +152,7 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
           active: p.active ?? true,
         },
       });
-      await refresh();
+      await refresh(true);
     } catch (e: any) {
       alert("Erro ao salvar prêmio: " + e.message);
     }
@@ -160,7 +160,7 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
   async function remove(id: string) {
     if (!confirm("Excluir este prêmio?")) return;
     await del({ data: { pin, id } });
-    await refresh();
+    await refresh(true);
   }
   async function deleteSelectedParticipants(ids: string[]) {
     if (!confirm(`Tem certeza que deseja excluir ${ids.length} participante(s)? Os prêmios deles serão estornados no estoque.`)) return;
