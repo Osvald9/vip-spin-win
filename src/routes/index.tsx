@@ -75,14 +75,36 @@ function Kiosk() {
 
   const runTestSpin = useCallback(() => {
     setStage("spinning");
-    const pool = testPool.length > 0 ? testPool : [
-      { id: "1", name: "Copo Térmico", icon: "zap" },
-      { id: "2", name: "Copo Plástico", icon: "heart" },
-      { id: "3", name: "Boné", icon: "robot" },
+    const activePrizes = testPool.length > 0 ? testPool : [
+      { id: "1", name: "Copo Térmico", icon: "zap", weight: 30 },
+      { id: "2", name: "Copo Plástico", icon: "heart", weight: 50 },
+      { id: "3", name: "Boné", icon: "robot", weight: 20 },
     ];
-    const p = pool[Math.floor(Math.random() * pool.length)];
-    setResult({ won: true, prize: { id: p.id, name: p.name, icon: p.icon }, code: "TESTE-000000" });
-    setFinalIcons([p.icon, p.icon, p.icon]);
+    const totalWeight = activePrizes.reduce((s, p: any) => s + Math.max(0, p.weight || 0), 0);
+    const roll = Math.random() * 100;
+
+    if (roll < totalWeight && activePrizes.length > 0) {
+      let acc = 0;
+      let p = activePrizes[0];
+      for (const item of activePrizes) {
+        acc += Math.max(0, (item as any).weight || 0);
+        if (roll <= acc) {
+          p = item;
+          break;
+        }
+      }
+      setResult({ won: true, prize: { id: p.id, name: p.name, icon: p.icon }, code: "TESTE-000000" });
+      setFinalIcons([p.icon, p.icon, p.icon]);
+    } else {
+      setResult({ won: false });
+      const pool = ICON_KEYS.filter(Boolean);
+      const a = pool[Math.floor(Math.random() * pool.length)];
+      let b = pool[Math.floor(Math.random() * pool.length)];
+      while (b === a) b = pool[Math.floor(Math.random() * pool.length)];
+      let c = pool[Math.floor(Math.random() * pool.length)];
+      while (c === a || c === b) c = pool[Math.floor(Math.random() * pool.length)];
+      setFinalIcons([a, b, c]);
+    }
     settleCount.current = 0;
     setSpinning(true);
     playSpinTicks(2600);
@@ -115,44 +137,26 @@ function Kiosk() {
 
         const res = await spinFn({ data: { participantId: activeId } });
         
-        const fallbackPrizes = [
-          { id: "f1", name: "Copo Térmico", icon: "zap" },
-          { id: "f2", name: "Copo Plástico", icon: "heart" },
-          { id: "f3", name: "Boné", icon: "robot" },
-        ];
-        const defaultPrize = fallbackPrizes[Math.floor(Math.random() * fallbackPrizes.length)];
-
         if (res && res.ok && res.won && res.prize) {
           setResult({ won: true, prize: res.prize, code: res.code });
           setFinalIcons([res.prize.icon, res.prize.icon, res.prize.icon]);
         } else {
-          setResult({
-            won: true,
-            prize: defaultPrize,
-            code: "VIP-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-          });
-          setFinalIcons([defaultPrize.icon, defaultPrize.icon, defaultPrize.icon]);
+          setResult({ won: false });
+          const pool = ICON_KEYS.filter(Boolean);
+          const a = pool[Math.floor(Math.random() * pool.length)];
+          let b = pool[Math.floor(Math.random() * pool.length)];
+          while (b === a) b = pool[Math.floor(Math.random() * pool.length)];
+          let c = pool[Math.floor(Math.random() * pool.length)];
+          while (c === a || c === b) c = pool[Math.floor(Math.random() * pool.length)];
+          setFinalIcons([a, b, c]);
         }
         
-        // SÓ inicia o giro físico dos rolos após recebermos as chaves reais de destino do banco.
-        // Isso evita qualquer diferença entre o que roda e em qual ícone o rolo deve parar!
         setSpinning(true);
         playSpinTicks(2600);
       } catch (err) {
-        const fallbackPrizes = [
-          { id: "f1", name: "Copo Térmico", icon: "zap" },
-          { id: "f2", name: "Copo Plástico", icon: "heart" },
-          { id: "f3", name: "Boné", icon: "robot" },
-        ];
-        const defaultPrize = fallbackPrizes[Math.floor(Math.random() * fallbackPrizes.length)];
-        setResult({
-          won: true,
-          prize: defaultPrize,
-          code: "VIP-" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-        });
-        setFinalIcons([defaultPrize.icon, defaultPrize.icon, defaultPrize.icon]);
-        setSpinning(true);
-        playSpinTicks(2600);
+        setStage("form");
+        setSpinning(false);
+        alert("Erro de conexão. Tente novamente.");
       }
     },
     [spinFn, registerFn],

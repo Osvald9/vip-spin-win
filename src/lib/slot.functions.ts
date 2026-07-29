@@ -217,88 +217,42 @@ export const listActivePrizes = createServerFn({ method: "GET" }).handler(async 
 export const spinSlot = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => z.object({ participantId: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    if (shouldUseSupabase()) {
-      try {
-        const supabase = await loadAdmin();
-        const { data: participant } = await supabase
-          .from("participants")
-          .select("id, won, prize_id")
-          .eq("id", data.participantId)
-          .maybeSingle();
-        if (participant) {
-          if (participant.prize_id || participant.won) {
-            return { ok: false as const, error: "Você já jogou nesta ativação." };
-          }
+    const db = await getLocalDatabase();
+    const participants = await db.readParticipants();
+    const participant = participants.find((p: any) => p.id === data.participantId);
+    if (!participant) return { ok: false as const, error: "Participante não encontrado" };
+    if (participant.prize_id || participant.won) {
+      return { ok: false as const, error: "Você já jogou nesta ativação." };
+    }
 
-          const pool = [
-            { name: "Copo Térmico", icon: "zap", weight: 30 },
-            { name: "Copo Plástico", icon: "heart", weight: 50 },
-            { name: "Boné", icon: "robot", weight: 20 },
-          ];
+    const prizes = await db.readPrizes();
+    const activePrizes = prizes.filter((p: any) => p.active && p.remaining_quantity > 0);
+    
+    // Soma das porcentagens/pesos dos brindes ativos disponíveis
+    const totalWeight = activePrizes.reduce((s: number, p: any) => s + Math.max(0, p.weight || 0), 0);
 
-          const totalWeight = pool.reduce((s, p) => s + p.weight, 0);
-          const roll = Math.random() * totalWeight;
-          let acc = 0;
-          let winner = pool[0];
-          
-          for (const p of pool) {
-            acc += p.weight;
-            if (roll <= acc) {
-              winner = p;
-              break;
-            }
-          }
-
-          const code = generateCode();
-          
-          const { error: updateError } = await supabase
-            .from("participants")
-            .update({
-              prize_id: null,
-              prize_name: winner.name,
-              redemption_code: code,
-              won: true,
-            })
-            .eq("id", data.participantId);
-            
-          if (!updateError) {
-            return {
-              ok: true as const,
-              won: true as const,
-              prize: { id: "temp-" + Date.now(), name: winner.name, icon: winner.icon },
-              code,
-            };
-          }
-        }
-      } catch (e) {
-        console.warn("[Supabase] Fallback to local DB on spinSlot:", e);
-      }
-    } else {
-      const db = await getLocalDatabase();
-      const participants = await db.readParticipants();
-      const participant = participants.find((p: any) => p.id === data.participantId);
-      if (!participant) return { ok: false as const, error: "Participante não encontrado" };
-      if (participant.prize_id || participant.won) {
-        return { ok: false as const, error: "Você já jogou nesta ativação." };
-      }
-
-      const pool = [
-        { id: "1", name: "Copo Térmico", icon: "zap", weight: 30 },
-        { id: "2", name: "Copo Plástico", icon: "heart", weight: 50 },
-        { id: "3", name: "Boné", icon: "robot", weight: 20 },
-      ];
-      const totalWeight = pool.reduce((s: number, p: any) => s + p.weight, 0);
-
-      const roll = Math.random() * totalWeight;
+    // Sorteia um valor de 0 a 100
+    const roll = Math.random() * 100;
+    
+    let winner: any = null;
+    if (roll < totalWeight && activePrizes.length > 0) {
       let acc = 0;
-      let winner = pool[0];
-      for (const p of pool) {
-        acc += p.weight;
+      for (const p of activePrizes) {
+        acc += Math.max(0, p.weight || 0);
         if (roll <= acc) {
           winner = p;
           break;
         }
       }
+    }
+
+    if (winner) {
+      // Diminui 1 unidade do brinde sorteado
+      winner.remaining_quantity -= 1;
+      if (winner.remaining_quantity <= 0) {
+        winner.active = false;
+      }
+      await db.writePrizes(prizes);
 
       const code = generateCode();
       participant.prize_id = winner.id;
@@ -312,6 +266,13 @@ export const spinSlot = createServerFn({ method: "POST" })
         won: true as const,
         prize: { id: winner.id, name: winner.name, icon: winner.icon },
         code,
+      };
+    } else {
+      participant.won = false;
+      await db.writeParticipants(participants);
+      return {
+        ok: true as const,
+        won: false as const,
       };
     }
   });
