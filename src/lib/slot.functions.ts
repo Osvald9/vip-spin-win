@@ -51,51 +51,31 @@ async function getLocalDatabase() {
     const defaultPrizes = [
       {
         id: "1647a8fb-0863-49d6-b8db-bd4f6a7d8bb1",
-        name: "Kit Conexão VIP",
-        icon: "zap", // zap (raio)
-        total_quantity: 20,
-        remaining_quantity: 20,
-        weight: 10,
+        name: "Copo Térmico",
+        icon: "zap",
+        total_quantity: 50,
+        remaining_quantity: 50,
+        weight: 30,
         active: true,
         created_at: new Date().toISOString(),
       },
       {
         id: "2747a8fb-0863-49d6-b8db-bd4f6a7d8bb2",
-        name: "Camiseta VIP",
-        icon: "heart", // heart (coração amarelo)
-        total_quantity: 30,
-        remaining_quantity: 30,
-        weight: 20,
+        name: "Copo Plástico",
+        icon: "heart",
+        total_quantity: 100,
+        remaining_quantity: 100,
+        weight: 50,
         active: true,
         created_at: new Date().toISOString(),
       },
       {
         id: "3847a8fb-0863-49d6-b8db-bd4f6a7d8bb3",
-        name: "Adesivo VIP",
-        icon: "robot", // robot (robô)
-        total_quantity: 100,
-        remaining_quantity: 100,
-        weight: 40,
-        active: true,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "4947a8fb-0863-49d6-b8db-bd4f6a7d8bb4",
-        name: "1 Mês de Internet Grátis",
-        icon: "wifi", // wifi (wifi)
-        total_quantity: 3,
-        remaining_quantity: 3,
-        weight: 2,
-        active: true,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "5a47a8fb-0863-49d6-b8db-bd4f6a7d8bb5",
-        name: "Caneca Conexão VIP",
-        icon: "house", // house (casa)
-        total_quantity: 15,
-        remaining_quantity: 15,
-        weight: 8,
+        name: "Boné",
+        icon: "robot",
+        total_quantity: 30,
+        remaining_quantity: 30,
+        weight: 20,
         active: true,
         created_at: new Date().toISOString(),
       },
@@ -122,29 +102,32 @@ export const registerParticipant = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => registerSchema.parse(data))
   .handler(async ({ data }) => {
     if (shouldUseSupabase()) {
-      const supabase = await loadAdmin();
-      const { data: existing } = await supabase
-        .from("participants")
-        .select("id")
-        .eq("whatsapp", data.whatsapp)
-        .maybeSingle();
-      if (existing) {
-        return { ok: false as const, error: "Este WhatsApp já participou desta ativação." };
+      try {
+        const supabase = await loadAdmin();
+        const { data: existing } = await supabase
+          .from("participants")
+          .select("id")
+          .eq("whatsapp", data.whatsapp)
+          .maybeSingle();
+        if (existing) {
+          return { ok: false as const, error: "Este WhatsApp já participou desta ativação." };
+        }
+        const { data: created, error } = await supabase
+          .from("participants")
+          .insert({
+            full_name: data.full_name,
+            whatsapp: data.whatsapp,
+            city: data.city,
+            accepted_terms: true,
+          })
+          .select()
+          .single();
+        if (!error && created) {
+          return { ok: true as const, participantId: created.id };
+        }
+      } catch (e) {
+        console.warn("[Supabase] Fallback to local DB on register:", e);
       }
-      const { data: created, error } = await supabase
-        .from("participants")
-        .insert({
-          full_name: data.full_name,
-          whatsapp: data.whatsapp,
-          city: data.city,
-          accepted_terms: true,
-        })
-        .select()
-        .single();
-      if (error || !created) {
-        return { ok: false as const, error: "Não foi possível cadastrar. Tente novamente." };
-      }
-      return { ok: true as const, participantId: created.id };
     } else {
       const db = await getLocalDatabase();
       const participants = await db.readParticipants();
@@ -173,15 +156,19 @@ export const registerParticipant = createServerFn({ method: "POST" })
 
 export const listActivePrizes = createServerFn({ method: "GET" }).handler(async () => {
   if (shouldUseSupabase()) {
-    const supabase = await loadAdmin();
-    // Provisório: Retorna prêmios fixos conforme solicitado
-    return { 
-      prizes: [
-        { id: "temp-copo-termico", name: "Copo Térmico", icon: "zap", remaining_quantity: 999, active: true },
-        { id: "temp-copo-plastico", name: "Copo Plástico", icon: "heart", remaining_quantity: 999, active: true },
-        { id: "temp-bone", name: "Boné", icon: "robot", remaining_quantity: 999, active: true },
-      ] 
-    };
+    try {
+      const supabase = await loadAdmin();
+      const { data, error } = await supabase
+        .from("prizes")
+        .select("id,name,icon,remaining_quantity,active")
+        .eq("active", true)
+        .order("name");
+      if (!error && data && data.length > 0) {
+        return { prizes: data };
+      }
+    } catch (e) {
+      console.warn("[Supabase] Fallback to local DB on listActivePrizes:", e);
+    }
   } else {
     const db = await getLocalDatabase();
     const prizes = await db.readPrizes();
@@ -203,59 +190,61 @@ export const spinSlot = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => z.object({ participantId: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
     if (shouldUseSupabase()) {
-      const supabase = await loadAdmin();
-      const { data: participant } = await supabase
-        .from("participants")
-        .select("id, won, prize_id")
-        .eq("id", data.participantId)
-        .maybeSingle();
-      if (!participant) return { ok: false as const, error: "Participante não encontrado" };
-      if (participant.prize_id || participant.won) {
-        return { ok: false as const, error: "Você já jogou nesta ativação." };
-      }
+      try {
+        const supabase = await loadAdmin();
+        const { data: participant } = await supabase
+          .from("participants")
+          .select("id, won, prize_id")
+          .eq("id", data.participantId)
+          .maybeSingle();
+        if (participant) {
+          if (participant.prize_id || participant.won) {
+            return { ok: false as const, error: "Você já jogou nesta ativação." };
+          }
 
-      // Provisório: Prêmios hardcoded e 100% de chance de ganhar
-      const pool = [
-        { name: "Copo Térmico", icon: "zap", weight: 30 },
-        { name: "Copo Plástico", icon: "heart", weight: 50 },
-        { name: "Boné", icon: "robot", weight: 20 },
-      ];
+          const pool = [
+            { name: "Copo Térmico", icon: "zap", weight: 30 },
+            { name: "Copo Plástico", icon: "heart", weight: 50 },
+            { name: "Boné", icon: "robot", weight: 20 },
+          ];
 
-      const totalWeight = pool.reduce((s, p) => s + p.weight, 0);
-      const roll = Math.random() * totalWeight;
-      let acc = 0;
-      let winner = pool[0];
-      
-      for (const p of pool) {
-        acc += p.weight;
-        if (roll <= acc) {
-          winner = p;
-          break;
+          const totalWeight = pool.reduce((s, p) => s + p.weight, 0);
+          const roll = Math.random() * totalWeight;
+          let acc = 0;
+          let winner = pool[0];
+          
+          for (const p of pool) {
+            acc += p.weight;
+            if (roll <= acc) {
+              winner = p;
+              break;
+            }
+          }
+
+          const code = generateCode();
+          
+          const { error: updateError } = await supabase
+            .from("participants")
+            .update({
+              prize_id: null,
+              prize_name: winner.name,
+              redemption_code: code,
+              won: true,
+            })
+            .eq("id", data.participantId);
+            
+          if (!updateError) {
+            return {
+              ok: true as const,
+              won: true as const,
+              prize: { id: "temp-" + Date.now(), name: winner.name, icon: winner.icon },
+              code,
+            };
+          }
         }
+      } catch (e) {
+        console.warn("[Supabase] Fallback to local DB on spinSlot:", e);
       }
-
-      const code = generateCode();
-      
-      const { error: updateError } = await supabase
-        .from("participants")
-        .update({
-          prize_id: null,
-          prize_name: winner.name,
-          redemption_code: code,
-          won: true,
-        })
-        .eq("id", data.participantId);
-        
-      if (updateError) {
-        return { ok: false as const, error: "Erro ao registrar o prêmio. Tente novamente." };
-      }
-
-      return {
-        ok: true as const,
-        won: true as const,
-        prize: { id: "temp-" + Date.now(), name: winner.name, icon: winner.icon },
-        code,
-      };
     } else {
       const db = await getLocalDatabase();
       const participants = await db.readParticipants();
@@ -321,14 +310,18 @@ export const adminListAll = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     checkPin(data.pin);
     if (shouldUseSupabase()) {
-      const supabase = await loadAdmin();
-      const [{ data: prizes, error: prizesError }, { data: participants, error: partsError }] = await Promise.all([
-        supabase.from("prizes").select("*").order("created_at"),
-        supabase.from("participants").select("*").order("created_at", { ascending: false }),
-      ]);
-      if (prizesError) throw new Error("Erro ao carregar prêmios: " + prizesError.message);
-      if (partsError) throw new Error("Erro ao carregar participantes: " + partsError.message);
-      return { prizes: prizes ?? [], participants: participants ?? [] };
+      try {
+        const supabase = await loadAdmin();
+        const [{ data: prizes, error: prizesError }, { data: participants, error: partsError }] = await Promise.all([
+          supabase.from("prizes").select("*").order("created_at"),
+          supabase.from("participants").select("*").order("created_at", { ascending: false }),
+        ]);
+        if (!prizesError && !partsError) {
+          return { prizes: prizes ?? [], participants: participants ?? [] };
+        }
+      } catch (e) {
+        console.warn("[Supabase] Fallback to local DB on adminListAll:", e);
+      }
     } else {
       const db = await getLocalDatabase();
       const prizes = await db.readPrizes();
@@ -363,25 +356,28 @@ export const adminUpsertPrize = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     checkPin(data.pin);
     if (shouldUseSupabase()) {
-      const supabase = await loadAdmin();
-      const payload = {
-        name: data.name,
-        icon: data.icon,
-        total_quantity: data.total_quantity,
-        remaining_quantity: data.remaining_quantity,
-        weight: data.weight,
-        active: data.active,
-      };
-      if (data.id) {
-        const { error } = await supabase.from("prizes").update(payload).eq("id", data.id);
-        if (error) throw new Error(`Update error: ${error.message}`);
-      } else {
-        const crypto = await import("crypto");
-        const insertPayload = { id: crypto.randomUUID(), ...payload };
-        const { error } = await supabase.from("prizes").insert(insertPayload);
-        if (error) throw new Error(`Insert error: ${error.message}`);
+      try {
+        const supabase = await loadAdmin();
+        const payload = {
+          name: data.name,
+          icon: data.icon,
+          total_quantity: data.total_quantity,
+          remaining_quantity: data.remaining_quantity,
+          weight: data.weight,
+          active: data.active,
+        };
+        if (data.id) {
+          const { error } = await supabase.from("prizes").update(payload).eq("id", data.id);
+          if (!error) return { ok: true };
+        } else {
+          const crypto = await import("crypto");
+          const insertPayload = { id: crypto.randomUUID(), ...payload };
+          const { error } = await supabase.from("prizes").insert(insertPayload);
+          if (!error) return { ok: true };
+        }
+      } catch (e) {
+        console.warn("[Supabase] Fallback to local DB on adminUpsertPrize:", e);
       }
-      return { ok: true };
     } else {
       const db = await getLocalDatabase();
       const prizes = await db.readPrizes();
@@ -423,10 +419,13 @@ export const adminDeletePrize = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     checkPin(data.pin);
     if (shouldUseSupabase()) {
-      const supabase = await loadAdmin();
-      const { error } = await supabase.from("prizes").delete().eq("id", data.id);
-      if (error) throw new Error(error.message);
-      return { ok: true };
+      try {
+        const supabase = await loadAdmin();
+        const { error } = await supabase.from("prizes").delete().eq("id", data.id);
+        if (!error) return { ok: true };
+      } catch (e) {
+        console.warn("[Supabase] Fallback to local DB on adminDeletePrize:", e);
+      }
     } else {
       const db = await getLocalDatabase();
       const prizes = await db.readPrizes();
