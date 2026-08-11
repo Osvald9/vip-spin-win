@@ -366,20 +366,35 @@ export const spinSlot = createServerFn({ method: "POST" })
       isPrizeAvailableOnDate(p, todayKey, todayWonByPrize[p.id] || 0)
     );
     
-    // Soma das porcentagens/pesos dos brindes disponíveis no momento
-    const totalWeight = activePrizes.reduce((s: number, p: any) => s + Math.max(0, p.weight || 0), 0);
+    // Taxa de vitória geral configurada para 60% nos dias com brindes disponíveis
+    const GLOBAL_WIN_CHANCE_PERCENT = 60;
 
-    // Sorteia um valor de 0 a 100
-    const roll = Math.random() * 100;
-    
     let winner: any = null;
-    if (roll < totalWeight && activePrizes.length > 0) {
-      let acc = 0;
-      for (const p of activePrizes) {
-        acc += Math.max(0, p.weight || 0);
-        if (roll <= acc) {
-          winner = p;
-          break;
+
+    if (activePrizes.length > 0) {
+      // 1. Sorteia se o participante ganha (60% de chance)
+      const winRoll = Math.random() * 100;
+      const isWinner = winRoll < GLOBAL_WIN_CHANCE_PERCENT;
+
+      if (isWinner) {
+        // 2. Sorteia qual brinde foi ganho proporcionalmente ao peso de cada um
+        const totalWeight = activePrizes.reduce((s: number, p: any) => s + Math.max(0, p.weight || 0), 0);
+        
+        if (totalWeight > 0) {
+          const prizeRoll = Math.random() * totalWeight;
+          let acc = 0;
+          for (const p of activePrizes) {
+            acc += Math.max(0, p.weight || 0);
+            if (prizeRoll <= acc) {
+              winner = p;
+              break;
+            }
+          }
+        }
+        
+        // Fallback garantido para o primeiro brinde disponível
+        if (!winner) {
+          winner = activePrizes[0];
         }
       }
     }

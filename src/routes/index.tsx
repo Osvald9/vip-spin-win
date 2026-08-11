@@ -76,19 +76,23 @@ function Kiosk() {
   const runTestSpin = useCallback(() => {
     setStage("spinning");
     const activePrizes = testPool.length > 0 ? testPool : [
-      { id: "1", name: "Copo Térmico", icon: "zap", weight: 30 },
-      { id: "2", name: "Copo Plástico", icon: "heart", weight: 50 },
-      { id: "3", name: "Boné", icon: "robot", weight: 20 },
+      { id: "1", name: "Copo Amarelo", icon: "zap", weight: 65 },
+      { id: "2", name: "Chaveiro", icon: "heart", weight: 16 },
+      { id: "3", name: "Caneta", icon: "robot", weight: 10 },
+      { id: "4", name: "Lixeira", icon: "wifi", weight: 9 },
     ];
-    const totalWeight = activePrizes.reduce((s, p: any) => s + Math.max(0, p.weight || 0), 0);
-    const roll = Math.random() * 100;
+    
+    const GLOBAL_WIN_CHANCE = 60;
+    const isWinner = activePrizes.length > 0 && Math.random() * 100 < GLOBAL_WIN_CHANCE;
 
-    if (roll < totalWeight && activePrizes.length > 0) {
+    if (isWinner) {
+      const totalWeight = activePrizes.reduce((s, p: any) => s + Math.max(0, p.weight || 0), 0);
+      const prizeRoll = Math.random() * (totalWeight || 1);
       let acc = 0;
       let p = activePrizes[0];
       for (const item of activePrizes) {
         acc += Math.max(0, (item as any).weight || 0);
-        if (roll <= acc) {
+        if (prizeRoll <= acc) {
           p = item;
           break;
         }

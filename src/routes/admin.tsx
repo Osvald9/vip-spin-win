@@ -492,8 +492,9 @@ function PrizesTab({
         <div className="space-y-1">
           <strong className="font-bold text-base">Separação de Brindes por Dia & Cotas por Data:</strong>
           <div className="text-xs text-muted-foreground leading-relaxed">
+            • <strong>Chance Geral de Vitória:</strong> Fixada em <strong>60% de chance</strong> nos dias com brindes disponíveis (e 0% em dias sem brindes ou com cotas esgotadas).<br />
             • <strong>Limite/Dia Padrão:</strong> Quantidade liberada por dia para dias normais (ex: 10 un/dia).<br />
-            • <strong>Cotas Específicas por Data:</strong> Clique no botão <span className="font-bold text-primary">📅 Cotas por Data</span> em qualquer prêmio para definir valores personalizados para datas específicas (ex: 20 no dia 11/08, 40 no dia 12/08).<br />
+            • <strong>Cotas Específicas por Data:</strong> Clique no botão <span className="font-bold text-primary">📅 Cotas por Data</span> em qualquer prêmio para definir valores personalizados para datas específicas (ex: 13 a 16 de Agosto).<br />
             • <strong>Ciclo de 24h:</strong> O ciclo encerra às <strong>02:00 da manhã</strong> para acompanhar eventos noturnos.
           </div>
         </div>
