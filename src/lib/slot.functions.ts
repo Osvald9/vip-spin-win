@@ -25,6 +25,47 @@ const globalStore = globalThis as unknown as {
   participants?: any[];
 };
 
+// O ciclo do dia de evento encerra às 02:00 da manhã.
+// Deslocar 2 horas faz com que o período entre 00:00 e 01:59 pertença ao dia anterior.
+const DAY_CYCLE_OFFSET_MS = 2 * 60 * 60 * 1000;
+
+function getEventDateKey(date: Date = new Date()): string {
+  const shifted = new Date(date.getTime() - DAY_CYCLE_OFFSET_MS);
+  try {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    return formatter.format(shifted); // Formato YYYY-MM-DD
+  } catch {
+    return shifted.toISOString().slice(0, 10);
+  }
+}
+
+function getTodayKey(): string {
+  return getEventDateKey(new Date());
+}
+
+function isCreatedToday(isoString?: string | null, todayKey?: string): boolean {
+  if (!isoString) return false;
+  const targetKey = todayKey ?? getTodayKey();
+  try {
+    const createdDate = new Date(isoString);
+    return getEventDateKey(createdDate) === targetKey;
+  } catch {
+    return false;
+  }
+}
+
+function getEffectiveDailyLimit(prize: any, dateKey: string): number {
+  if (prize?.date_quotas && typeof prize.date_quotas[dateKey] === "number") {
+    return Number(prize.date_quotas[dateKey]);
+  }
+  return Number(prize?.daily_limit) || 0;
+}
+
 function getInitialPrizes() {
   return [
     {
@@ -33,6 +74,8 @@ function getInitialPrizes() {
       icon: "zap",
       total_quantity: 50,
       remaining_quantity: 50,
+      daily_limit: 0,
+      date_quotas: {},
       weight: 30,
       active: true,
       created_at: new Date().toISOString(),
@@ -43,6 +86,8 @@ function getInitialPrizes() {
       icon: "heart",
       total_quantity: 100,
       remaining_quantity: 100,
+      daily_limit: 0,
+      date_quotas: {},
       weight: 50,
       active: true,
       created_at: new Date().toISOString(),
@@ -53,6 +98,8 @@ function getInitialPrizes() {
       icon: "robot",
       total_quantity: 30,
       remaining_quantity: 30,
+      daily_limit: 0,
+      date_quotas: {},
       weight: 20,
       active: true,
       created_at: new Date().toISOString(),
@@ -188,7 +235,7 @@ export const listActivePrizes = createServerFn({ method: "GET" }).handler(async 
       const supabase = await loadAdmin();
       const { data, error } = await supabase
         .from("prizes")
-        .select("id,name,icon,remaining_quantity,active")
+        .select("id,name,icon,remaining_quantity,active,daily_limit,date_quotas")
         .eq("active", true)
         .order("name");
       if (!error && data && data.length > 0) {
@@ -197,21 +244,40 @@ export const listActivePrizes = createServerFn({ method: "GET" }).handler(async 
     } catch (e) {
       console.warn("[Supabase] Fallback to local DB on listActivePrizes:", e);
     }
-  } else {
-    const db = await getLocalDatabase();
-    const prizes = await db.readPrizes();
-    const activePrizes = prizes
-      .filter((p: any) => p.active)
-      .map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        icon: p.icon,
-        remaining_quantity: p.remaining_quantity,
-        active: p.active,
-      }))
-      .sort((a: any, b: any) => a.name.localeCompare(b.name));
-    return { prizes: activePrizes };
   }
+
+  const db = await getLocalDatabase();
+  const prizes = await db.readPrizes();
+  const participants = await db.readParticipants();
+  const todayKey = getTodayKey();
+
+  const todayWonByPrize: Record<string, number> = {};
+  for (const p of participants) {
+    if (p.won && p.prize_id && isCreatedToday(p.created_at, todayKey)) {
+      todayWonByPrize[p.prize_id] = (todayWonByPrize[p.prize_id] || 0) + 1;
+    }
+  }
+
+  const activePrizes = prizes
+    .filter((p: any) => {
+      if (!p.active || p.remaining_quantity <= 0) return false;
+      const effectiveLimit = getEffectiveDailyLimit(p, todayKey);
+      if (effectiveLimit > 0 && (todayWonByPrize[p.id] || 0) >= effectiveLimit) {
+        return false;
+      }
+      return true;
+    })
+    .map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      icon: p.icon,
+      remaining_quantity: p.remaining_quantity,
+      daily_limit: p.daily_limit ?? 0,
+      date_quotas: p.date_quotas ?? {},
+      active: p.active,
+    }))
+    .sort((a: any, b: any) => a.name.localeCompare(b.name));
+  return { prizes: activePrizes };
 });
 
 export const spinSlot = createServerFn({ method: "POST" })
@@ -226,9 +292,27 @@ export const spinSlot = createServerFn({ method: "POST" })
     }
 
     const prizes = await db.readPrizes();
-    const activePrizes = prizes.filter((p: any) => p.active && p.remaining_quantity > 0);
+    const todayKey = getTodayKey();
+
+    // Contagem de brindes entregues no ciclo do dia de hoje
+    const todayWonByPrize: Record<string, number> = {};
+    for (const p of participants) {
+      if (p.won && p.prize_id && isCreatedToday(p.created_at, todayKey)) {
+        todayWonByPrize[p.prize_id] = (todayWonByPrize[p.prize_id] || 0) + 1;
+      }
+    }
+
+    // Apenas brindes ativos, com estoque geral > 0 E com cota do dia/data disponível
+    const activePrizes = prizes.filter((p: any) => {
+      if (!p.active || p.remaining_quantity <= 0) return false;
+      const effectiveLimit = getEffectiveDailyLimit(p, todayKey);
+      if (effectiveLimit > 0 && (todayWonByPrize[p.id] || 0) >= effectiveLimit) {
+        return false;
+      }
+      return true;
+    });
     
-    // Soma das porcentagens/pesos dos brindes ativos disponíveis
+    // Soma das porcentagens/pesos dos brindes disponíveis no momento
     const totalWeight = activePrizes.reduce((s: number, p: any) => s + Math.max(0, p.weight || 0), 0);
 
     // Sorteia um valor de 0 a 100
@@ -247,7 +331,7 @@ export const spinSlot = createServerFn({ method: "POST" })
     }
 
     if (winner) {
-      // Diminui 1 unidade do brinde sorteado
+      // Diminui 1 unidade do estoque do brinde sorteado
       winner.remaining_quantity -= 1;
       if (winner.remaining_quantity <= 0) {
         winner.active = false;
@@ -298,36 +382,54 @@ export const adminListAll = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => adminAuth.parse(d))
   .handler(async ({ data }) => {
     checkPin(data.pin);
-    if (shouldUseSupabase()) {
-      try {
-        const supabase = await loadAdmin();
-        const [{ data: prizes, error: prizesError }, { data: participants, error: partsError }] = await Promise.all([
-          supabase.from("prizes").select("*").order("created_at"),
-          supabase.from("participants").select("*").order("created_at", { ascending: false }),
-        ]);
-        if (!prizesError && !partsError) {
-          return { prizes: prizes ?? [], participants: participants ?? [] };
+    const db = await getLocalDatabase();
+    const prizes = await db.readPrizes();
+    const participants = await db.readParticipants();
+    const todayKey = getTodayKey();
+
+    // Contagem de brindes entregues por data e hoje
+    const todayWonByPrize: Record<string, number> = {};
+    const wonByDateByPrize: Record<string, Record<string, number>> = {};
+
+    for (const p of participants) {
+      if (p.won && p.prize_id) {
+        if (!wonByDateByPrize[p.prize_id]) wonByDateByPrize[p.prize_id] = {};
+        const pDateKey = getEventDateKey(new Date(p.created_at));
+        wonByDateByPrize[p.prize_id][pDateKey] = (wonByDateByPrize[p.prize_id][pDateKey] || 0) + 1;
+
+        if (isCreatedToday(p.created_at, todayKey)) {
+          todayWonByPrize[p.prize_id] = (todayWonByPrize[p.prize_id] || 0) + 1;
         }
-      } catch (e) {
-        console.warn("[Supabase] Fallback to local DB on adminListAll:", e);
       }
-    } else {
-      const db = await getLocalDatabase();
-      const prizes = await db.readPrizes();
-      const participants = await db.readParticipants();
-      
-      // Sort prizes by created_at ascending
-      const sortedPrizes = [...prizes].sort(
-        (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      );
-      
-      // Sort participants by created_at descending
-      const sortedParticipants = [...participants].sort(
-        (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      
-      return { prizes: sortedPrizes, participants: sortedParticipants };
     }
+
+    // Adiciona métricas do dia e cotas por data a cada brinde
+    const enrichedPrizes = prizes.map((p: any) => {
+      const effectiveLimitToday = getEffectiveDailyLimit(p, todayKey);
+      const wonToday = todayWonByPrize[p.id] || 0;
+      const dailyRemaining = effectiveLimitToday > 0 ? Math.max(0, effectiveLimitToday - wonToday) : null;
+      return {
+        ...p,
+        daily_limit: Number(p.daily_limit) || 0,
+        date_quotas: p.date_quotas ?? {},
+        effective_limit_today: effectiveLimitToday,
+        won_today: wonToday,
+        daily_remaining: dailyRemaining,
+        won_by_date: wonByDateByPrize[p.id] || {},
+      };
+    });
+    
+    // Sort prizes by created_at ascending
+    const sortedPrizes = [...enrichedPrizes].sort(
+      (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    
+    // Sort participants by created_at descending
+    const sortedParticipants = [...participants].sort(
+      (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    
+    return { prizes: sortedPrizes, participants: sortedParticipants, todayKey };
   });
 
 const upsertPrizeSchema = adminAuth.extend({
@@ -336,6 +438,8 @@ const upsertPrizeSchema = adminAuth.extend({
   icon: z.string().min(1).max(40),
   total_quantity: z.number().int().min(0).max(100000),
   remaining_quantity: z.number().int().min(0).max(100000),
+  daily_limit: z.number().int().min(0).max(100000).optional().default(0),
+  date_quotas: z.record(z.string(), z.number().int().min(0)).optional().default({}),
   weight: z.number().int().min(1).max(1000),
   active: z.boolean(),
 });
@@ -352,6 +456,8 @@ export const adminUpsertPrize = createServerFn({ method: "POST" })
           icon: data.icon,
           total_quantity: data.total_quantity,
           remaining_quantity: data.remaining_quantity,
+          daily_limit: data.daily_limit ?? 0,
+          date_quotas: data.date_quotas ?? {},
           weight: data.weight,
           active: data.active,
         };
@@ -367,40 +473,44 @@ export const adminUpsertPrize = createServerFn({ method: "POST" })
       } catch (e) {
         console.warn("[Supabase] Fallback to local DB on adminUpsertPrize:", e);
       }
-    } else {
-      const db = await getLocalDatabase();
-      const prizes = await db.readPrizes();
-      
-      if (data.id) {
-        const index = prizes.findIndex((p: any) => p.id === data.id);
-        if (index !== -1) {
-          prizes[index] = {
-            ...prizes[index],
-            name: data.name,
-            icon: data.icon,
-            total_quantity: data.total_quantity,
-            remaining_quantity: data.remaining_quantity,
-            weight: data.weight,
-            active: data.active,
-          };
-        }
-      } else {
-        const crypto = await import("crypto");
-        prizes.push({
-          id: crypto.randomUUID(),
+    }
+
+    const db = await getLocalDatabase();
+    const prizes = await db.readPrizes();
+    
+    if (data.id) {
+      const index = prizes.findIndex((p: any) => p.id === data.id);
+      if (index !== -1) {
+        prizes[index] = {
+          ...prizes[index],
           name: data.name,
           icon: data.icon,
           total_quantity: data.total_quantity,
           remaining_quantity: data.remaining_quantity,
+          daily_limit: data.daily_limit ?? 0,
+          date_quotas: data.date_quotas ?? {},
           weight: data.weight,
           active: data.active,
-          created_at: new Date().toISOString(),
-        });
+        };
       }
-      
-      await db.writePrizes(prizes);
-      return { ok: true };
+    } else {
+      const crypto = await import("crypto");
+      prizes.push({
+        id: crypto.randomUUID(),
+        name: data.name,
+        icon: data.icon,
+        total_quantity: data.total_quantity,
+        remaining_quantity: data.remaining_quantity,
+        daily_limit: data.daily_limit ?? 0,
+        date_quotas: data.date_quotas ?? {},
+        weight: data.weight,
+        active: data.active,
+        created_at: new Date().toISOString(),
+      });
     }
+    
+    await db.writePrizes(prizes);
+    return { ok: true };
   });
 
 export const adminDeletePrize = createServerFn({ method: "POST" })
