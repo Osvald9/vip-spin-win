@@ -280,9 +280,13 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
     const totalDailyLimit = prizes
       .filter((p) => p.active)
       .reduce((s, p) => {
-        const customLimit = p.date_quotas?.[todayKey];
-        const limit = typeof customLimit === "number" ? customLimit : (p.daily_limit || 0);
-        return s + limit;
+        const quotas = p.date_quotas;
+        const hasSpecificDates = quotas && typeof quotas === "object" && Object.keys(quotas).length > 0;
+        if (hasSpecificDates) {
+          const customLimit = quotas[todayKey];
+          return s + (typeof customLimit === "number" ? customLimit : 0);
+        }
+        return s + (p.daily_limit || 0);
       }, 0);
 
     return {
@@ -692,7 +696,12 @@ function PrizeRow({
       {/* Badges de Status e Botão de Cotas por Data */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
         <div className="flex flex-wrap items-center gap-2">
-          {effectiveLimit > 0 ? (
+          {customCount > 0 && !hasCustomToday ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-400">
+              <Calendar className="h-3.5 w-3.5" />
+              Não agendado para hoje (liberado em {dateEntries.map(([k]) => formatBRDateFromKey(k)).join(", ")})
+            </span>
+          ) : effectiveLimit > 0 ? (
             isDailyExhausted ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/15 px-3 py-1 text-xs font-bold text-destructive">
                 <AlertCircle className="h-3.5 w-3.5" />

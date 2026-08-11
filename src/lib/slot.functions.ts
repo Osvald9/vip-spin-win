@@ -60,10 +60,44 @@ function isCreatedToday(isoString?: string | null, todayKey?: string): boolean {
 }
 
 function getEffectiveDailyLimit(prize: any, dateKey: string): number {
-  if (prize?.date_quotas && typeof prize.date_quotas[dateKey] === "number") {
-    return Number(prize.date_quotas[dateKey]);
+  const quotas = prize?.date_quotas;
+  const hasSpecificDates = quotas && typeof quotas === "object" && Object.keys(quotas).length > 0;
+
+  if (hasSpecificDates) {
+    if (typeof quotas[dateKey] === "number") {
+      return Number(quotas[dateKey]);
+    }
+    return 0; // Se possui datas específicas e a data atual não está configurada, cota = 0
   }
+
   return Number(prize?.daily_limit) || 0;
+}
+
+function isPrizeAvailableOnDate(prize: any, dateKey: string, wonToday: number): boolean {
+  if (!prize.active || prize.remaining_quantity <= 0) return false;
+
+  const quotas = prize.date_quotas;
+  const hasSpecificDates = quotas && typeof quotas === "object" && Object.keys(quotas).length > 0;
+
+  if (hasSpecificDates) {
+    // Se possui agendamento por data, só pode sair nas datas configuradas
+    const dateQuota = quotas[dateKey];
+    if (typeof dateQuota !== "number" || dateQuota <= 0) {
+      return false;
+    }
+    if (wonToday >= dateQuota) {
+      return false;
+    }
+    return true;
+  }
+
+  // Sem agendamento por data: usa o limite diário padrão se houver
+  const dailyLimit = Number(prize.daily_limit) || 0;
+  if (dailyLimit > 0 && wonToday >= dailyLimit) {
+    return false;
+  }
+
+  return true;
 }
 
 function getInitialPrizes() {
@@ -291,14 +325,7 @@ export const listActivePrizes = createServerFn({ method: "GET" }).handler(async 
   }
 
   const activePrizes = prizes
-    .filter((p: any) => {
-      if (!p.active || p.remaining_quantity <= 0) return false;
-      const effectiveLimit = getEffectiveDailyLimit(p, todayKey);
-      if (effectiveLimit > 0 && (todayWonByPrize[p.id] || 0) >= effectiveLimit) {
-        return false;
-      }
-      return true;
-    })
+    .filter((p: any) => isPrizeAvailableOnDate(p, todayKey, todayWonByPrize[p.id] || 0))
     .map((p: any) => ({
       id: p.id,
       name: p.name,
@@ -334,15 +361,10 @@ export const spinSlot = createServerFn({ method: "POST" })
       }
     }
 
-    // Apenas brindes ativos, com estoque geral > 0 E com cota do dia/data disponível
-    const activePrizes = prizes.filter((p: any) => {
-      if (!p.active || p.remaining_quantity <= 0) return false;
-      const effectiveLimit = getEffectiveDailyLimit(p, todayKey);
-      if (effectiveLimit > 0 && (todayWonByPrize[p.id] || 0) >= effectiveLimit) {
-        return false;
-      }
-      return true;
-    });
+    // Apenas brindes disponíveis exatamente na data de hoje
+    const activePrizes = prizes.filter((p: any) => 
+      isPrizeAvailableOnDate(p, todayKey, todayWonByPrize[p.id] || 0)
+    );
     
     // Soma das porcentagens/pesos dos brindes disponíveis no momento
     const totalWeight = activePrizes.reduce((s: number, p: any) => s + Math.max(0, p.weight || 0), 0);
