@@ -62,6 +62,7 @@ interface Participant {
   full_name: string;
   whatsapp: string;
   city: string;
+  is_client?: boolean;
   prize_name: string | null;
   redemption_code: string | null;
   won: boolean;
@@ -1014,11 +1015,12 @@ function ParticipantsTab({
   };
 
   function exportCSV() {
-    const header = ["Nome", "WhatsApp", "Cidade", "Ganhou", "Prêmio", "Código", "Data"];
+    const header = ["Nome", "WhatsApp", "Cidade", "Cliente VIP", "Ganhou", "Prêmio", "Código", "Data"];
     const rows = filtered.map((p) => [
       p.full_name,
       p.whatsapp,
       p.city,
+      p.is_client ? "Sim" : "Não",
       p.won ? "Sim" : "Não",
       p.prize_name ?? "",
       p.redemption_code ?? "",
@@ -1139,6 +1141,7 @@ function ParticipantsTab({
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">WhatsApp</th>
               <th className="px-4 py-3">Cidade</th>
+              <th className="px-4 py-3">Status VIP</th>
               <th className="px-4 py-3">Prêmio</th>
               <th className="px-4 py-3">Código</th>
               <th className="px-4 py-3">Data / Hora</th>
@@ -1158,6 +1161,17 @@ function ParticipantsTab({
                 <td className="px-4 py-3 font-medium">{p.full_name}</td>
                 <td className="px-4 py-3 font-mono text-xs">{p.whatsapp}</td>
                 <td className="px-4 py-3">{p.city}</td>
+                <td className="px-4 py-3">
+                  {p.is_client ? (
+                    <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1">
+                      ★ Cliente VIP
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      Não Cliente
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   {p.won ? (
                     <span className="rounded-full bg-primary/20 px-2.5 py-1 text-xs font-bold text-primary inline-flex items-center gap-1">

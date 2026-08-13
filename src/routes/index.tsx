@@ -31,7 +31,14 @@ export const Route = createFileRoute("/")({
 
 type Stage = "form" | "spinning" | "result";
 type SpinResult =
-  | { won: true; prize: { id: string; name: string; icon: string }; code: string }
+  | {
+      won: true;
+      prize: { id: string; name: string; icon: string };
+      isClient?: boolean;
+      deliveredPrize?: string;
+      conditionalNote?: string;
+      code: string;
+    }
   | { won: false };
 
 function Kiosk() {
@@ -145,7 +152,14 @@ function Kiosk() {
         const res = await spinFn({ data: { participantId: activeId } });
         
         if (res && res.ok && res.won && res.prize) {
-          setResult({ won: true, prize: res.prize, code: res.code });
+          setResult({
+            won: true,
+            prize: res.prize,
+            isClient: res.isClient,
+            deliveredPrize: res.deliveredPrize,
+            conditionalNote: res.conditionalNote,
+            code: res.code,
+          });
           setFinalIcons([res.prize.icon, res.prize.icon, res.prize.icon]);
         } else {
           setResult({ won: false });
@@ -267,6 +281,7 @@ function RegistrationForm({
   const [fullName, setName] = useState("");
   const [whatsapp, setWhats] = useState("");
   const [city, setCity] = useState("");
+  const [isClient, setIsClient] = useState<boolean | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -274,15 +289,22 @@ function RegistrationForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!accepted) return setError("Aceite os termos para continuar.");
     if (fullName.trim().length < 2) return setError("Informe seu nome completo.");
     if (whatsapp.replace(/\D/g, "").length < 10)
       return setError("Informe um WhatsApp válido com DDD.");
     if (city.trim().length < 2) return setError("Informe sua cidade.");
+    if (isClient === null) return setError("Por favor, selecione se você já é cliente Conexão VIP.");
+    if (!accepted) return setError("Aceite os termos para continuar.");
     setLoading(true);
     try {
       const res = await register({
-        data: { full_name: fullName, whatsapp, city, accepted_terms: true as const },
+        data: {
+          full_name: fullName,
+          whatsapp,
+          city,
+          is_client: isClient,
+          accepted_terms: true as const,
+        },
       });
       if (!res.ok) setError(res.error);
       else onDone(res.participantId);
@@ -344,6 +366,41 @@ function RegistrationForm({
             autoComplete="off"
           />
         </Field>
+        
+        {/* Pergunta: Já é cliente Conexão VIP? */}
+        <div className="sm:col-span-2 mt-1">
+          <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-black">
+            Você já é cliente Conexão VIP?
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setIsClient(true)}
+              disabled={disabled}
+              className={`flex items-center justify-center gap-2 rounded-xl border-3 py-3 px-4 font-black uppercase text-xs sm:text-sm transition-all ${
+                isClient === true
+                  ? "border-black bg-yellow text-black ring-4 ring-black/10 scale-[1.01]"
+                  : "border-black/30 bg-muted/30 text-black/70 hover:border-black"
+              }`}
+            >
+              {isClient === true && <CheckCircle2 className="h-4 w-4 text-black shrink-0" />}
+              Sim, sou cliente
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsClient(false)}
+              disabled={disabled}
+              className={`flex items-center justify-center gap-2 rounded-xl border-3 py-3 px-4 font-black uppercase text-xs sm:text-sm transition-all ${
+                isClient === false
+                  ? "border-black bg-yellow text-black ring-4 ring-black/10 scale-[1.01]"
+                  : "border-black/30 bg-muted/30 text-black/70 hover:border-black"
+              }`}
+            >
+              {isClient === false && <CheckCircle2 className="h-4 w-4 text-black shrink-0" />}
+              Não sou cliente
+            </button>
+          </div>
+        </div>
       </div>
 
       <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border-2 border-black bg-white p-3 text-sm">
@@ -505,63 +562,109 @@ function ResultScreen({
   result: SpinResult;
   onRestart: () => void;
 }) {
+  const isThermalCup =
+    result.won &&
+    (result.prize.id === "55555555-1316-4000-8000-000000000005" ||
+      result.prize.name.toLowerCase().includes("térmico"));
+
+  const isMonthlyPlan =
+    result.won &&
+    (result.prize.id === "77777777-1316-4000-8000-000000000007" ||
+      result.prize.name.toLowerCase().includes("mensalidade") ||
+      result.prize.name.toLowerCase().includes("mês"));
+
   return (
     <div className="min-h-screen w-full bg-white text-black">
       <TopBar />
-      <div className="mx-auto flex max-w-2xl flex-col items-center px-6 pb-10 pt-10 text-center">
+      <div className="mx-auto flex max-w-2xl flex-col items-center px-6 pb-10 pt-6 text-center">
         {result.won ? (
           <>
             <div
-              className="grid h-28 w-28 place-items-center rounded-3xl border-4 border-black bg-yellow"
+              className="grid h-24 w-24 place-items-center rounded-3xl border-4 border-black bg-yellow shadow-sm"
               style={{ animation: "bounce-in 0.6s ease" }}
             >
-              <PartyPopper className="h-14 w-14 text-black" strokeWidth={2.5} />
+              <PartyPopper className="h-12 w-12 text-black" strokeWidth={2.5} />
             </div>
-            <h1 className="mt-6 text-4xl font-black leading-tight">
+
+            <h1 className="mt-4 text-3xl sm:text-4xl font-black leading-tight">
               Parabéns!
               <br />
-              Você ganhou{" "}
-              <span className="rounded-lg bg-yellow px-2 inline-block mt-2">
-                {result.prize.name}
+              <span className="rounded-xl bg-yellow px-3 py-1 inline-block mt-2">
+                {result.deliveredPrize ?? result.prize.name}
               </span>
             </h1>
 
-            <div className="mt-8 flex flex-col items-center justify-center gap-4 rounded-3xl border-4 border-black bg-yellow p-8 w-full">
-              <div className="text-center">
-                <div className="text-xs font-black uppercase tracking-widest text-black/60">
-                  Seu prêmio
+            {/* Card Detalhado do Prêmio Conquistado */}
+            <div className="mt-6 flex flex-col items-center justify-center gap-4 rounded-3xl border-4 border-black bg-yellow p-6 w-full shadow-md">
+              <div className="text-center w-full">
+                <div className="text-xs font-black uppercase tracking-widest text-black/70">
+                  Brinde Conquistado
                 </div>
-                <div className="mt-2 font-display text-3xl font-black text-black">
-                  {result.prize.name}
+                <div className="mt-2 font-display text-2xl sm:text-3xl font-black text-black">
+                  {result.deliveredPrize ?? result.prize.name}
                 </div>
-                <p className="mt-4 text-sm font-bold text-black/80">
-                  Retire o seu brinde com a nossa equipe no stand!
+
+                {/* Caixa Explicativa da Regra de Copos */}
+                {isThermalCup && (
+                  <div className="mt-4 rounded-2xl border-2 border-black bg-white/90 p-4 text-xs sm:text-sm font-bold text-black text-left space-y-2">
+                    <div className="font-black uppercase text-black text-center tracking-wider pb-1 border-b border-black/20 text-xs">
+                      ★ Regra Especial Conexão VIP ★
+                    </div>
+                    <div className={`p-2 rounded-lg flex items-center gap-2 ${result.isClient ? "bg-yellow/40 border border-black font-black" : "text-black/70"}`}>
+                      <CheckCircle2 className={`h-4 w-4 shrink-0 ${result.isClient ? "text-black" : "text-black/40"}`} />
+                      <span><strong>Cliente Conexão VIP:</strong> Ganha 1 Copo Térmico {result.isClient && "(Seu brinde!)"}</span>
+                    </div>
+                    <div className={`p-2 rounded-lg flex items-center gap-2 ${!result.isClient ? "bg-yellow/40 border border-black font-black" : "text-black/70"}`}>
+                      <CheckCircle2 className={`h-4 w-4 shrink-0 ${!result.isClient ? "text-black" : "text-black/40"}`} />
+                      <span><strong>Não é Cliente:</strong> Ganha 1 Copo Amarelo {!result.isClient && "(Seu brinde!)"}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Caixa Explicativa da Regra de Mensalidade */}
+                {isMonthlyPlan && (
+                  <div className="mt-4 rounded-2xl border-2 border-black bg-white/90 p-4 text-xs sm:text-sm font-bold text-black text-left space-y-2">
+                    <div className="font-black uppercase text-black text-center tracking-wider pb-1 border-b border-black/20 text-xs">
+                      ★ Regra Especial de Mensalidade ★
+                    </div>
+                    <div className={`p-2 rounded-lg flex items-center gap-2 ${result.isClient ? "bg-yellow/40 border border-black font-black" : "text-black/70"}`}>
+                      <CheckCircle2 className={`h-4 w-4 shrink-0 ${result.isClient ? "text-black" : "text-black/40"}`} />
+                      <span><strong>Cliente Conexão VIP:</strong> 1 Mês de Mensalidade Grátis {result.isClient && "(Seu benefício!)"}</span>
+                    </div>
+                    <div className={`p-2 rounded-lg flex items-center gap-2 ${!result.isClient ? "bg-yellow/40 border border-black font-black" : "text-black/70"}`}>
+                      <CheckCircle2 className={`h-4 w-4 shrink-0 ${!result.isClient ? "text-black" : "text-black/40"}`} />
+                      <span><strong>Não é Cliente:</strong> 50% de desconto nas 2 primeiras mensalidades contratando hoje {!result.isClient && "(Seu benefício!)"}</span>
+                    </div>
+                  </div>
+                )}
+
+                <p className="mt-4 text-sm font-black text-black">
+                  Retire o seu brinde ou valide seu benefício com a nossa equipe no stand!
                 </p>
               </div>
             </div>
           </>
         ) : (
           <>
-            <div className="grid h-28 w-28 place-items-center rounded-3xl border-4 border-black bg-white">
-              <Trophy className="h-14 w-14 text-black" strokeWidth={2.5} />
+            <div className="grid h-24 w-24 place-items-center rounded-3xl border-4 border-black bg-white">
+              <Trophy className="h-12 w-12 text-black" strokeWidth={2.5} />
             </div>
-            <h1 className="mt-6 text-4xl font-black leading-tight">
+            <h1 className="mt-5 text-3xl sm:text-4xl font-black leading-tight">
               Ainda não foi dessa vez,<br />
               <span className="rounded-lg bg-yellow px-2">mas obrigado por participar!</span>
             </h1>
-            <p className="mt-5 max-w-md text-lg font-bold text-black">
-              Continue acompanhando a Conexão VIP.
+            <p className="mt-4 max-w-md text-base sm:text-lg font-bold text-black">
+              Continue acompanhando a Conexão VIP e aproveite as ofertas exclusivas no stand!
             </p>
           </>
         )}
 
         <button
           onClick={onRestart}
-          className="btn-yellow btn-yellow-hover mt-10 w-full rounded-2xl py-6 text-xl"
+          className="btn-yellow btn-yellow-hover mt-8 w-full rounded-2xl py-5 text-xl font-black"
         >
           <RotateCcw className="mr-2 inline h-6 w-6" /> Nova participação
         </button>
-
       </div>
     </div>
   );

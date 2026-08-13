@@ -10,6 +10,7 @@ const registerSchema = z.object({
     .max(30)
     .transform((v) => v.replace(/\D/g, "")),
   city: z.string().trim().min(2).max(80),
+  is_client: z.boolean().default(false),
   accepted_terms: z.literal(true),
 });
 
@@ -310,6 +311,7 @@ export const registerParticipant = createServerFn({ method: "POST" })
             full_name: data.full_name,
             whatsapp: data.whatsapp,
             city: data.city,
+            is_client: !!data.is_client,
             accepted_terms: true,
           })
           .select()
@@ -333,6 +335,7 @@ export const registerParticipant = createServerFn({ method: "POST" })
         full_name: data.full_name,
         whatsapp: data.whatsapp,
         city: data.city,
+        is_client: !!data.is_client,
         accepted_terms: true,
         prize_id: null,
         prize_name: null,
@@ -458,9 +461,44 @@ export const spinSlot = createServerFn({ method: "POST" })
       }
       await db.writePrizes(prizes);
 
+      const isClient = !!participant.is_client;
+      let deliveredPrize = winner.name;
+      let conditionalNote = "";
+
+      // Dinâmica de Copos:
+      // Se é cliente: Ganha Copo Térmico. Se não é cliente: Ganha Copo Amarelo.
+      if (
+        winner.id === "55555555-1316-4000-8000-000000000005" ||
+        winner.name.toLowerCase().includes("térmico")
+      ) {
+        if (isClient) {
+          deliveredPrize = "Copo Térmico Conexão VIP";
+          conditionalNote = "Por ser cliente VIP, você garantiu um Copo Térmico!";
+        } else {
+          deliveredPrize = "Copo Amarelo Conexão VIP";
+          conditionalNote = "Você ganhou um Copo Amarelo Conexão VIP!";
+        }
+      }
+
+      // Dinâmica de Mensalidade / Plano (2 por dia):
+      // Se é cliente: 1 Mês Grátis. Se não é cliente: 50% de desconto nas 2 primeiras mensalidades.
+      if (
+        winner.id === "77777777-1316-4000-8000-000000000007" ||
+        winner.name.toLowerCase().includes("mensalidade") ||
+        winner.name.toLowerCase().includes("mês")
+      ) {
+        if (isClient) {
+          deliveredPrize = "1 Mês de Mensalidade Grátis";
+          conditionalNote = "Como cliente VIP, você ganhou 1 mês de mensalidade 100% grátis!";
+        } else {
+          deliveredPrize = "50% de Desconto nas 2 primeiras mensalidades";
+          conditionalNote = "Você ganhou 50% de desconto nas 2 primeiras mensalidades contratando hoje no stand!";
+        }
+      }
+
       const code = generateCode();
       participant.prize_id = winner.id;
-      participant.prize_name = winner.name;
+      participant.prize_name = deliveredPrize;
       participant.redemption_code = code;
       participant.won = true;
       await db.writeParticipants(participants);
@@ -469,6 +507,9 @@ export const spinSlot = createServerFn({ method: "POST" })
         ok: true as const,
         won: true as const,
         prize: { id: winner.id, name: winner.name, icon: winner.icon },
+        isClient,
+        deliveredPrize,
+        conditionalNote,
         code,
       };
     } else {
