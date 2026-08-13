@@ -76,10 +76,13 @@ function Kiosk() {
   const runTestSpin = useCallback(() => {
     setStage("spinning");
     const activePrizes = testPool.length > 0 ? testPool : [
-      { id: "1", name: "Copo Amarelo", icon: "zap", weight: 61 },
-      { id: "2", name: "Chaveiro", icon: "heart", weight: 23 },
-      { id: "3", name: "Caneta", icon: "robot", weight: 9 },
-      { id: "4", name: "Lixeira de Carro", icon: "wifi", weight: 7 },
+      { id: "1", name: "Copo Amarelo", icon: "zap", weight: 73 },
+      { id: "2", name: "Chaveiro", icon: "heart", weight: 11 },
+      { id: "3", name: "Caneta", icon: "robot", weight: 5 },
+      { id: "4", name: "Lixeira de Carro", icon: "wifi", weight: 4 },
+      { id: "5", name: "Copo Térmico", icon: "house", weight: 3 },
+      { id: "6", name: "Boné", icon: "camera", weight: 3 },
+      { id: "7", name: "1 Mês de Mensalidade Grátis", icon: "zap", weight: 1 },
     ];
     
     const GLOBAL_WIN_CHANCE = 60;
