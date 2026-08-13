@@ -486,7 +486,7 @@ export const spinSlot = createServerFn({ method: "POST" })
 const adminAuth = z.object({ pin: z.string().min(1) });
 
 function checkPin(pin: string) {
-  const expected = process.env.ADMIN_PIN || "070529";
+  const expected = process.env.ADMIN_PIN || "1234";
   if (pin !== expected) throw new Error("PIN inválido");
 }
 
