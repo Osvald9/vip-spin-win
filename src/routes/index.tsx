@@ -83,13 +83,12 @@ function Kiosk() {
   const runTestSpin = useCallback(() => {
     setStage("spinning");
     const activePrizes = testPool.length > 0 ? testPool : [
-      { id: "1", name: "Copo Amarelo", icon: "zap", weight: 73 },
+      { id: "1", name: "Copo (Térmico / Amarelo)", icon: "zap", weight: 76 },
       { id: "2", name: "Chaveiro", icon: "heart", weight: 11 },
       { id: "3", name: "Caneta", icon: "robot", weight: 5 },
       { id: "4", name: "Lixeira de Carro", icon: "wifi", weight: 4 },
-      { id: "5", name: "Copo Térmico", icon: "house", weight: 3 },
       { id: "6", name: "Boné", icon: "camera", weight: 3 },
-      { id: "7", name: "1 Mês de Mensalidade Grátis", icon: "zap", weight: 1 },
+      { id: "7", name: "1 Mês Grátis / 50% OFF Mensalidades", icon: "house", weight: 1 },
     ];
     
     const GLOBAL_WIN_CHANCE = 60;
@@ -281,7 +280,6 @@ function RegistrationForm({
   const [fullName, setName] = useState("");
   const [whatsapp, setWhats] = useState("");
   const [city, setCity] = useState("");
-  const [isClient, setIsClient] = useState<boolean | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -293,7 +291,6 @@ function RegistrationForm({
     if (whatsapp.replace(/\D/g, "").length < 10)
       return setError("Informe um WhatsApp válido com DDD.");
     if (city.trim().length < 2) return setError("Informe sua cidade.");
-    if (isClient === null) return setError("Por favor, selecione se você já é cliente Conexão VIP.");
     if (!accepted) return setError("Aceite os termos para continuar.");
     setLoading(true);
     try {
@@ -302,7 +299,6 @@ function RegistrationForm({
           full_name: fullName,
           whatsapp,
           city,
-          is_client: isClient,
           accepted_terms: true as const,
         },
       });
@@ -366,41 +362,6 @@ function RegistrationForm({
             autoComplete="off"
           />
         </Field>
-        
-        {/* Pergunta: Já é cliente Conexão VIP? */}
-        <div className="sm:col-span-2 mt-1">
-          <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-black">
-            Você já é cliente Conexão VIP?
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setIsClient(true)}
-              disabled={disabled}
-              className={`flex items-center justify-center gap-2 rounded-xl border-3 py-3 px-4 font-black uppercase text-xs sm:text-sm transition-all ${
-                isClient === true
-                  ? "border-black bg-yellow text-black ring-4 ring-black/10 scale-[1.01]"
-                  : "border-black/30 bg-muted/30 text-black/70 hover:border-black"
-              }`}
-            >
-              {isClient === true && <CheckCircle2 className="h-4 w-4 text-black shrink-0" />}
-              Sim, sou cliente
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsClient(false)}
-              disabled={disabled}
-              className={`flex items-center justify-center gap-2 rounded-xl border-3 py-3 px-4 font-black uppercase text-xs sm:text-sm transition-all ${
-                isClient === false
-                  ? "border-black bg-yellow text-black ring-4 ring-black/10 scale-[1.01]"
-                  : "border-black/30 bg-muted/30 text-black/70 hover:border-black"
-              }`}
-            >
-              {isClient === false && <CheckCircle2 className="h-4 w-4 text-black shrink-0" />}
-              Não sou cliente
-            </button>
-          </div>
-        </div>
       </div>
 
       <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border-2 border-black bg-white p-3 text-sm">
@@ -562,16 +523,21 @@ function ResultScreen({
   result: SpinResult;
   onRestart: () => void;
 }) {
-  const isThermalCup =
+  const isCup =
     result.won &&
-    (result.prize.id === "55555555-1316-4000-8000-000000000005" ||
-      result.prize.name.toLowerCase().includes("térmico"));
+    result.prize.name.toLowerCase().includes("copo");
 
   const isMonthlyPlan =
     result.won &&
-    (result.prize.id === "77777777-1316-4000-8000-000000000007" ||
-      result.prize.name.toLowerCase().includes("mensalidade") ||
-      result.prize.name.toLowerCase().includes("mês"));
+    (result.prize.name.toLowerCase().includes("mensalidade") ||
+      result.prize.name.toLowerCase().includes("mês") ||
+      result.prize.name.toLowerCase().includes("desconto"));
+
+  const displayTitle = isCup
+    ? "Copo Conexão VIP"
+    : isMonthlyPlan
+      ? "Benefício Especial Conexão VIP"
+      : (result.deliveredPrize ?? result.prize.name);
 
   return (
     <div className="min-h-screen w-full bg-white text-black">
@@ -590,7 +556,7 @@ function ResultScreen({
               Parabéns!
               <br />
               <span className="rounded-xl bg-yellow px-3 py-1 inline-block mt-2">
-                {result.deliveredPrize ?? result.prize.name}
+                Você Ganhou!
               </span>
             </h1>
 
@@ -598,47 +564,55 @@ function ResultScreen({
             <div className="mt-6 flex flex-col items-center justify-center gap-4 rounded-3xl border-4 border-black bg-yellow p-6 w-full shadow-md">
               <div className="text-center w-full">
                 <div className="text-xs font-black uppercase tracking-widest text-black/70">
-                  Brinde Conquistado
+                  Seu Brinde
                 </div>
                 <div className="mt-2 font-display text-2xl sm:text-3xl font-black text-black">
-                  {result.deliveredPrize ?? result.prize.name}
+                  {displayTitle}
                 </div>
 
                 {/* Caixa Explicativa da Regra de Copos */}
-                {isThermalCup && (
-                  <div className="mt-4 rounded-2xl border-2 border-black bg-white/90 p-4 text-xs sm:text-sm font-bold text-black text-left space-y-2">
-                    <div className="font-black uppercase text-black text-center tracking-wider pb-1 border-b border-black/20 text-xs">
-                      ★ Regra Especial Conexão VIP ★
+                {isCup && (
+                  <div className="mt-5 rounded-2xl border-3 border-black bg-white p-4 sm:p-5 text-sm sm:text-base font-bold text-black text-left space-y-3 shadow-xs">
+                    <div className="p-3 rounded-xl bg-yellow/30 border-2 border-black flex items-start gap-2.5">
+                      <span className="text-xl">🏆</span>
+                      <div>
+                        <span className="font-black text-black text-sm uppercase tracking-wide block">Se você é cliente:</span>
+                        <span className="text-black font-extrabold text-base">Ganhou um Copo Térmico!</span>
+                      </div>
                     </div>
-                    <div className={`p-2 rounded-lg flex items-center gap-2 ${result.isClient ? "bg-yellow/40 border border-black font-black" : "text-black/70"}`}>
-                      <CheckCircle2 className={`h-4 w-4 shrink-0 ${result.isClient ? "text-black" : "text-black/40"}`} />
-                      <span><strong>Cliente Conexão VIP:</strong> Ganha 1 Copo Térmico {result.isClient && "(Seu brinde!)"}</span>
-                    </div>
-                    <div className={`p-2 rounded-lg flex items-center gap-2 ${!result.isClient ? "bg-yellow/40 border border-black font-black" : "text-black/70"}`}>
-                      <CheckCircle2 className={`h-4 w-4 shrink-0 ${!result.isClient ? "text-black" : "text-black/40"}`} />
-                      <span><strong>Não é Cliente:</strong> Ganha 1 Copo Amarelo {!result.isClient && "(Seu brinde!)"}</span>
+
+                    <div className="p-3 rounded-xl bg-yellow/30 border-2 border-black flex items-start gap-2.5">
+                      <span className="text-xl">🟡</span>
+                      <div>
+                        <span className="font-black text-black text-sm uppercase tracking-wide block">Se não é cliente:</span>
+                        <span className="text-black font-extrabold text-base">Ganhou um Copo Amarelo!</span>
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {/* Caixa Explicativa da Regra de Mensalidade */}
                 {isMonthlyPlan && (
-                  <div className="mt-4 rounded-2xl border-2 border-black bg-white/90 p-4 text-xs sm:text-sm font-bold text-black text-left space-y-2">
-                    <div className="font-black uppercase text-black text-center tracking-wider pb-1 border-b border-black/20 text-xs">
-                      ★ Regra Especial de Mensalidade ★
+                  <div className="mt-5 rounded-2xl border-3 border-black bg-white p-4 sm:p-5 text-sm sm:text-base font-bold text-black text-left space-y-3 shadow-xs">
+                    <div className="p-3 rounded-xl bg-yellow/30 border-2 border-black flex items-start gap-2.5">
+                      <span className="text-xl">🎁</span>
+                      <div>
+                        <span className="font-black text-black text-sm uppercase tracking-wide block">Se você é cliente:</span>
+                        <span className="text-black font-extrabold text-base">Ganhou 1 Mês Grátis!</span>
+                      </div>
                     </div>
-                    <div className={`p-2 rounded-lg flex items-center gap-2 ${result.isClient ? "bg-yellow/40 border border-black font-black" : "text-black/70"}`}>
-                      <CheckCircle2 className={`h-4 w-4 shrink-0 ${result.isClient ? "text-black" : "text-black/40"}`} />
-                      <span><strong>Cliente Conexão VIP:</strong> 1 Mês de Mensalidade Grátis {result.isClient && "(Seu benefício!)"}</span>
-                    </div>
-                    <div className={`p-2 rounded-lg flex items-center gap-2 ${!result.isClient ? "bg-yellow/40 border border-black font-black" : "text-black/70"}`}>
-                      <CheckCircle2 className={`h-4 w-4 shrink-0 ${!result.isClient ? "text-black" : "text-black/40"}`} />
-                      <span><strong>Não é Cliente:</strong> 50% de desconto nas 2 primeiras mensalidades contratando hoje {!result.isClient && "(Seu benefício!)"}</span>
+
+                    <div className="p-3 rounded-xl bg-yellow/30 border-2 border-black flex items-start gap-2.5">
+                      <span className="text-xl">🏷️</span>
+                      <div>
+                        <span className="font-black text-black text-sm uppercase tracking-wide block">Se não é cliente:</span>
+                        <span className="text-black font-extrabold text-base">Ganhou 50% de desconto nas 2 primeiras mensalidades contratando hoje!</span>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                <p className="mt-4 text-sm font-black text-black">
+                <p className="mt-5 text-sm sm:text-base font-black text-black">
                   Retire o seu brinde ou valide seu benefício com a nossa equipe no stand!
                 </p>
               </div>

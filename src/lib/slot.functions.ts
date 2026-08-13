@@ -105,18 +105,18 @@ function getInitialPrizes() {
   return [
     {
       id: "11111111-1316-4000-8000-000000000001",
-      name: "Copo Amarelo",
+      name: "Copo (Térmico / Amarelo)",
       icon: "zap",
-      total_quantity: 2000,
-      remaining_quantity: 2000,
-      daily_limit: 500,
+      total_quantity: 2080,
+      remaining_quantity: 2080,
+      daily_limit: 520,
       date_quotas: {
-        "2026-08-13": 500,
-        "2026-08-14": 500,
-        "2026-08-15": 500,
-        "2026-08-16": 500,
+        "2026-08-13": 520,
+        "2026-08-14": 520,
+        "2026-08-15": 520,
+        "2026-08-16": 520,
       },
-      weight: 73,
+      weight: 76,
       active: true,
       created_at: new Date().toISOString(),
     },
@@ -172,23 +172,6 @@ function getInitialPrizes() {
       created_at: new Date().toISOString(),
     },
     {
-      id: "55555555-1316-4000-8000-000000000005",
-      name: "Copo Térmico",
-      icon: "house",
-      total_quantity: 80,
-      remaining_quantity: 80,
-      daily_limit: 20,
-      date_quotas: {
-        "2026-08-13": 20,
-        "2026-08-14": 20,
-        "2026-08-15": 20,
-        "2026-08-16": 20,
-      },
-      weight: 3,
-      active: true,
-      created_at: new Date().toISOString(),
-    },
-    {
       id: "66666666-1316-4000-8000-000000000006",
       name: "Boné",
       icon: "camera",
@@ -207,8 +190,8 @@ function getInitialPrizes() {
     },
     {
       id: "77777777-1316-4000-8000-000000000007",
-      name: "1 Mês de Mensalidade Grátis",
-      icon: "zap",
+      name: "1 Mês Grátis / 50% OFF Mensalidades",
+      icon: "house",
       total_quantity: 8,
       remaining_quantity: 8,
       daily_limit: 2,
@@ -461,39 +444,20 @@ export const spinSlot = createServerFn({ method: "POST" })
       }
       await db.writePrizes(prizes);
 
-      const isClient = !!participant.is_client;
-      let deliveredPrize = winner.name;
-      let conditionalNote = "";
+      const isCup =
+        winner.id === "11111111-1316-4000-8000-000000000001" ||
+        winner.name.toLowerCase().includes("copo");
 
-      // Dinâmica de Copos:
-      // Se é cliente: Ganha Copo Térmico. Se não é cliente: Ganha Copo Amarelo.
-      if (
-        winner.id === "55555555-1316-4000-8000-000000000005" ||
-        winner.name.toLowerCase().includes("térmico")
-      ) {
-        if (isClient) {
-          deliveredPrize = "Copo Térmico Conexão VIP";
-          conditionalNote = "Por ser cliente VIP, você garantiu um Copo Térmico!";
-        } else {
-          deliveredPrize = "Copo Amarelo Conexão VIP";
-          conditionalNote = "Você ganhou um Copo Amarelo Conexão VIP!";
-        }
-      }
-
-      // Dinâmica de Mensalidade / Plano (2 por dia):
-      // Se é cliente: 1 Mês Grátis. Se não é cliente: 50% de desconto nas 2 primeiras mensalidades.
-      if (
+      const isMonthlyPlan =
         winner.id === "77777777-1316-4000-8000-000000000007" ||
         winner.name.toLowerCase().includes("mensalidade") ||
-        winner.name.toLowerCase().includes("mês")
-      ) {
-        if (isClient) {
-          deliveredPrize = "1 Mês de Mensalidade Grátis";
-          conditionalNote = "Como cliente VIP, você ganhou 1 mês de mensalidade 100% grátis!";
-        } else {
-          deliveredPrize = "50% de Desconto nas 2 primeiras mensalidades";
-          conditionalNote = "Você ganhou 50% de desconto nas 2 primeiras mensalidades contratando hoje no stand!";
-        }
+        winner.name.toLowerCase().includes("mês");
+
+      let deliveredPrize = winner.name;
+      if (isCup) {
+        deliveredPrize = "Copo (Térmico / Amarelo)";
+      } else if (isMonthlyPlan) {
+        deliveredPrize = "1 Mês Grátis / 50% OFF Mensalidades";
       }
 
       const code = generateCode();
@@ -507,9 +471,7 @@ export const spinSlot = createServerFn({ method: "POST" })
         ok: true as const,
         won: true as const,
         prize: { id: winner.id, name: winner.name, icon: winner.icon },
-        isClient,
         deliveredPrize,
-        conditionalNote,
         code,
       };
     } else {
