@@ -525,19 +525,22 @@ function ResultScreen({
 }) {
   const isCup =
     result.won &&
-    result.prize.name.toLowerCase().includes("copo");
+    (result.prize?.name?.toLowerCase().includes("copo") ?? false);
 
   const isMonthlyPlan =
     result.won &&
-    (result.prize.name.toLowerCase().includes("mensalidade") ||
-      result.prize.name.toLowerCase().includes("mês") ||
-      result.prize.name.toLowerCase().includes("desconto"));
+    ((result.prize?.name?.toLowerCase().includes("mensalidade") ||
+      result.prize?.name?.toLowerCase().includes("mês") ||
+      result.prize?.name?.toLowerCase().includes("desconto")) ??
+      false);
 
-  const displayTitle = isCup
-    ? "Copo Conexão VIP"
-    : isMonthlyPlan
-      ? "Benefício Especial Conexão VIP"
-      : (result.deliveredPrize ?? result.prize.name);
+  const displayTitle = !result.won
+    ? ""
+    : isCup
+      ? "Copo Conexão VIP"
+      : isMonthlyPlan
+        ? "Benefício Especial Conexão VIP"
+        : (result.deliveredPrize || result.prize?.name || "Prêmio Especial");
 
   return (
     <div className="min-h-screen w-full bg-white text-black">
