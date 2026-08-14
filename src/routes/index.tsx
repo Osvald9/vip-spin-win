@@ -63,7 +63,7 @@ function Kiosk() {
     // Sincroniza prêmios customizados do localStorage com o backend se existirem
     if (typeof window !== "undefined") {
       try {
-        const cached = localStorage.getItem("vip_custom_prizes_v3");
+        const cached = localStorage.getItem("vip_custom_prizes_v4");
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) {
@@ -539,24 +539,9 @@ function ResultScreen({
   result: SpinResult;
   onRestart: () => void;
 }) {
-  const isCup =
-    result.won &&
-    (result.prize?.name?.toLowerCase().includes("copo") ?? false);
-
-  const isMonthlyPlan =
-    result.won &&
-    ((result.prize?.name?.toLowerCase().includes("mensalidade") ||
-      result.prize?.name?.toLowerCase().includes("mês") ||
-      result.prize?.name?.toLowerCase().includes("desconto")) ??
-      false);
-
   const displayTitle = !result.won
     ? ""
-    : isCup
-      ? "Copo Conexão VIP"
-      : isMonthlyPlan
-        ? "Benefício Especial Conexão VIP"
-        : (result.deliveredPrize || result.prize?.name || "Prêmio Especial");
+    : (result.deliveredPrize || result.prize?.name || "Prêmio Especial");
 
   return (
     <div className="min-h-screen w-full bg-white text-black">
@@ -585,54 +570,12 @@ function ResultScreen({
                 <div className="text-xs font-black uppercase tracking-widest text-black/70">
                   Seu Brinde
                 </div>
-                <div className="mt-2 font-display text-2xl sm:text-3xl font-black text-black">
+                <div className="mt-2 font-display text-2xl sm:text-4xl font-black text-black">
                   {displayTitle}
                 </div>
 
-                {/* Caixa Explicativa da Regra de Copos */}
-                {isCup && (
-                  <div className="mt-5 rounded-2xl border-3 border-black bg-white p-4 sm:p-5 text-sm sm:text-base font-bold text-black text-left space-y-3 shadow-xs">
-                    <div className="p-3 rounded-xl bg-yellow/30 border-2 border-black flex items-start gap-2.5">
-                      <span className="text-xl">🏆</span>
-                      <div>
-                        <span className="font-black text-black text-sm uppercase tracking-wide block">Se você é cliente:</span>
-                        <span className="text-black font-extrabold text-base">Ganhou um Copo Térmico!</span>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-yellow/30 border-2 border-black flex items-start gap-2.5">
-                      <span className="text-xl">🟡</span>
-                      <div>
-                        <span className="font-black text-black text-sm uppercase tracking-wide block">Se não é cliente:</span>
-                        <span className="text-black font-extrabold text-base">Ganhou um Copo Amarelo!</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Caixa Explicativa da Regra de Mensalidade */}
-                {isMonthlyPlan && (
-                  <div className="mt-5 rounded-2xl border-3 border-black bg-white p-4 sm:p-5 text-sm sm:text-base font-bold text-black text-left space-y-3 shadow-xs">
-                    <div className="p-3 rounded-xl bg-yellow/30 border-2 border-black flex items-start gap-2.5">
-                      <span className="text-xl">🎁</span>
-                      <div>
-                        <span className="font-black text-black text-sm uppercase tracking-wide block">Se você é cliente:</span>
-                        <span className="text-black font-extrabold text-base">Ganhou 1 Mês Grátis!</span>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-yellow/30 border-2 border-black flex items-start gap-2.5">
-                      <span className="text-xl">🏷️</span>
-                      <div>
-                        <span className="font-black text-black text-sm uppercase tracking-wide block">Se não é cliente:</span>
-                        <span className="text-black font-extrabold text-base">Ganhou 50% de desconto nas 2 primeiras mensalidades contratando hoje!</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <p className="mt-5 text-sm sm:text-base font-black text-black">
-                  Retire o seu brinde ou valide seu benefício com a nossa equipe no stand!
+                <p className="mt-6 text-sm sm:text-base font-black text-black">
+                  Retire o seu brinde com a nossa equipe no stand!
                 </p>
               </div>
             </div>

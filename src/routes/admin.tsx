@@ -196,7 +196,7 @@ function Admin() {
   );
 }
 
-const LOCAL_STORAGE_PRIZES_KEY = "vip_custom_prizes_v3";
+const LOCAL_STORAGE_PRIZES_KEY = "vip_custom_prizes_v4";
 
 function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }) {
   const listAll = useServerFn(adminListAll);
@@ -331,7 +331,7 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
   async function resetToEventDefaults() {
     if (
       !confirm(
-        "Deseja restaurar a configuração padrão do evento de 13 a 16 de Agosto (Copos 520/dia, Chaveiros 75/dia, Canetas 30/dia, Lixeiras 25/24, Bonés 20/dia, Mensalidade 2/dia)? Isso substituirá as edições atuais.",
+        "Deseja restaurar a configuração padrão do evento de 13 a 16 de Agosto (Copo Amarelo 500/dia, Chaveiros 75/dia, Canetas 30/dia, Lixeiras 25/24, Copo Térmico 20/dia, Bonés 20/dia, Mensalidade 2/dia)? Isso substituirá as edições atuais.",
       )
     )
       return;
@@ -339,18 +339,18 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
     const defaultPrizes: Prize[] = [
       {
         id: "11111111-1316-4000-8000-000000000001",
-        name: "Copo (Térmico / Amarelo)",
+        name: "Copo Amarelo",
         icon: "zap",
-        total_quantity: 2080,
-        remaining_quantity: 2080,
-        daily_limit: 520,
+        total_quantity: 2000,
+        remaining_quantity: 2000,
+        daily_limit: 500,
         date_quotas: {
-          "2026-08-13": 520,
-          "2026-08-14": 520,
-          "2026-08-15": 520,
-          "2026-08-16": 520,
+          "2026-08-13": 500,
+          "2026-08-14": 500,
+          "2026-08-15": 500,
+          "2026-08-16": 500,
         },
-        weight: 76,
+        weight: 73,
         active: true,
         created_at: "2026-08-11T18:28:00.000Z",
       },
@@ -406,6 +406,23 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         created_at: "2026-08-11T18:28:00.000Z",
       },
       {
+        id: "55555555-1316-4000-8000-000000000005",
+        name: "Copo Térmico",
+        icon: "house",
+        total_quantity: 80,
+        remaining_quantity: 80,
+        daily_limit: 20,
+        date_quotas: {
+          "2026-08-13": 20,
+          "2026-08-14": 20,
+          "2026-08-15": 20,
+          "2026-08-16": 20,
+        },
+        weight: 3,
+        active: true,
+        created_at: "2026-08-13T13:45:00.000Z",
+      },
+      {
         id: "66666666-1316-4000-8000-000000000006",
         name: "Boné",
         icon: "camera",
@@ -424,8 +441,8 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
       },
       {
         id: "77777777-1316-4000-8000-000000000007",
-        name: "1 Mês Grátis / 50% OFF Mensalidades",
-        icon: "house",
+        name: "1 Mês de Mensalidade Grátis",
+        icon: "zap",
         total_quantity: 8,
         remaining_quantity: 8,
         daily_limit: 2,
