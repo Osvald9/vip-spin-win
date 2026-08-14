@@ -143,32 +143,34 @@ function Kiosk() {
       <div className="min-h-screen w-full bg-white text-black flex flex-col justify-between">
         <TopBar />
 
-        <main className="mx-auto flex w-full max-w-lg flex-col items-center px-4 py-2 text-center">
-          <div className="rounded-3xl border-4 border-black bg-white p-6 sm:p-8 w-full shadow-[8px_8px_0_0_#000] flex flex-col items-center">
-            <div className="inline-block rounded-full bg-yellow border-2 border-black px-4 py-1 text-xs sm:text-sm font-black uppercase tracking-widest text-black mb-3">
+        <main className="mx-auto flex w-full max-w-2xl flex-col items-center px-4 py-2 text-center">
+          <div className="rounded-[2.5rem] border-[6px] border-black bg-white p-6 sm:p-10 w-full shadow-[10px_10px_0_0_#000] flex flex-col items-center">
+            <div className="inline-block rounded-full bg-yellow border-2 border-black px-5 py-1.5 text-xs sm:text-base font-black uppercase tracking-widest text-black mb-3">
               Ativação Stand Conexão VIP
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-black leading-tight">
+            <h1 className="text-3xl sm:text-4xl font-black text-black leading-tight">
               Escaneie o QR Code
             </h1>
 
-            <p className="mt-1 text-sm sm:text-base font-bold text-black/70">
+            <p className="mt-1 text-base sm:text-lg font-bold text-black/70">
               Aponte a câmera do seu celular para participar
             </p>
 
-            <div className="mt-4 relative overflow-hidden rounded-2xl border-4 border-black bg-white p-3 shadow-md">
-              <img
-                src="/qr-code.jpeg"
-                alt="QR Code Ativação"
-                className="w-56 sm:w-64 h-auto max-h-[300px] object-contain rounded-xl"
-              />
+            <div className="mt-6 w-full flex justify-center">
+              <div className="relative overflow-hidden rounded-3xl border-[5px] border-black bg-white p-4 sm:p-6 shadow-md w-full max-w-[480px]">
+                <img
+                  src="/qr-code.jpeg"
+                  alt="QR Code Ativação"
+                  className="w-full h-auto max-h-[500px] object-contain rounded-2xl mx-auto block"
+                />
+              </div>
             </div>
 
             <button
               type="button"
               onClick={() => setStage("slot")}
-              className="btn-yellow btn-yellow-hover mt-6 w-full rounded-2xl py-5 text-2xl sm:text-3xl font-black uppercase tracking-wider shadow-md"
+              className="btn-yellow btn-yellow-hover mt-8 w-full rounded-2xl py-6 sm:py-7 text-3xl sm:text-4xl font-black uppercase tracking-wider shadow-lg"
               style={{ animation: "big-pulse 1.4s ease-in-out infinite" }}
             >
               PRÓXIMO ➔
