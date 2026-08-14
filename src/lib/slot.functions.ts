@@ -94,44 +94,12 @@ function isCreatedToday(isoString?: string | null, todayKey?: string): boolean {
   }
 }
 
-function getEffectiveDailyLimit(prize: any, dateKey: string): number {
-  const quotas = prize?.date_quotas;
-  const hasSpecificDates = quotas && typeof quotas === "object" && Object.keys(quotas).length > 0;
-
-  if (hasSpecificDates) {
-    if (typeof quotas[dateKey] === "number") {
-      return Number(quotas[dateKey]);
-    }
-    return 0; // Se possui datas específicas e a data atual não está configurada, cota = 0
-  }
-
-  return Number(prize?.daily_limit) || 0;
-}
-
-function isPrizeAvailableOnDate(prize: any, dateKey: string, wonToday: number): boolean {
-  if (!prize.active || prize.remaining_quantity <= 0) return false;
-
-  const quotas = prize.date_quotas;
-  const hasSpecificDates = quotas && typeof quotas === "object" && Object.keys(quotas).length > 0;
-
-  if (hasSpecificDates) {
-    // Se possui agendamento por data, só pode sair nas datas configuradas
-    const dateQuota = quotas[dateKey];
-    if (typeof dateQuota !== "number" || dateQuota <= 0) {
-      return false;
-    }
-    if (wonToday >= dateQuota) {
-      return false;
-    }
-    return true;
-  }
-
-  // Sem agendamento por data: usa o limite diário padrão se houver
+function isPrizeAvailable(prize: any, wonToday: number): boolean {
+  if (!prize || !prize.active || prize.remaining_quantity <= 0) return false;
   const dailyLimit = Number(prize.daily_limit) || 0;
   if (dailyLimit > 0 && wonToday >= dailyLimit) {
     return false;
   }
-
   return true;
 }
 
@@ -144,12 +112,6 @@ function getInitialPrizes() {
       total_quantity: 2000,
       remaining_quantity: 2000,
       daily_limit: 500,
-      date_quotas: {
-        "2026-08-13": 500,
-        "2026-08-14": 500,
-        "2026-08-15": 500,
-        "2026-08-16": 500,
-      },
       weight: 73,
       active: true,
       created_at: new Date().toISOString(),
@@ -161,12 +123,6 @@ function getInitialPrizes() {
       total_quantity: 300,
       remaining_quantity: 300,
       daily_limit: 75,
-      date_quotas: {
-        "2026-08-13": 75,
-        "2026-08-14": 75,
-        "2026-08-15": 75,
-        "2026-08-16": 75,
-      },
       weight: 11,
       active: true,
       created_at: new Date().toISOString(),
@@ -178,12 +134,6 @@ function getInitialPrizes() {
       total_quantity: 120,
       remaining_quantity: 120,
       daily_limit: 30,
-      date_quotas: {
-        "2026-08-13": 30,
-        "2026-08-14": 30,
-        "2026-08-15": 30,
-        "2026-08-16": 30,
-      },
       weight: 5,
       active: true,
       created_at: new Date().toISOString(),
@@ -195,12 +145,6 @@ function getInitialPrizes() {
       total_quantity: 97,
       remaining_quantity: 97,
       daily_limit: 25,
-      date_quotas: {
-        "2026-08-13": 25,
-        "2026-08-14": 24,
-        "2026-08-15": 24,
-        "2026-08-16": 24,
-      },
       weight: 4,
       active: true,
       created_at: new Date().toISOString(),
@@ -212,12 +156,6 @@ function getInitialPrizes() {
       total_quantity: 80,
       remaining_quantity: 80,
       daily_limit: 20,
-      date_quotas: {
-        "2026-08-13": 20,
-        "2026-08-14": 20,
-        "2026-08-15": 20,
-        "2026-08-16": 20,
-      },
       weight: 3,
       active: true,
       created_at: new Date().toISOString(),
@@ -229,12 +167,6 @@ function getInitialPrizes() {
       total_quantity: 80,
       remaining_quantity: 80,
       daily_limit: 20,
-      date_quotas: {
-        "2026-08-13": 20,
-        "2026-08-14": 20,
-        "2026-08-15": 20,
-        "2026-08-16": 20,
-      },
       weight: 3,
       active: true,
       created_at: new Date().toISOString(),
@@ -246,12 +178,6 @@ function getInitialPrizes() {
       total_quantity: 8,
       remaining_quantity: 8,
       daily_limit: 2,
-      date_quotas: {
-        "2026-08-13": 2,
-        "2026-08-14": 2,
-        "2026-08-15": 2,
-        "2026-08-16": 2,
-      },
       weight: 1,
       active: true,
       created_at: new Date().toISOString(),
@@ -489,9 +415,9 @@ export const spinSlot = createServerFn({ method: "POST" })
       }
     }
 
-    // Apenas brindes disponíveis exatamente na data de hoje
+    // Apenas brindes disponíveis (ativos, com estoque restante e que não estouraram o limite diário de hoje)
     const activePrizes = prizes.filter((p: any) => 
-      isPrizeAvailableOnDate(p, todayKey, todayWonByPrize[p.id] || 0)
+      isPrizeAvailable(p, todayWonByPrize[p.id] || 0)
     );
     
     // Taxa de vitória geral configurada para 60% nos dias com brindes disponíveis
@@ -606,16 +532,14 @@ export const adminListAll = createServerFn({ method: "POST" })
       }
     }
 
-    // Adiciona métricas do dia e cotas por data a cada brinde
+    // Adiciona métricas do dia a cada brinde
     const enrichedPrizes = prizes.map((p: any) => {
-      const effectiveLimitToday = getEffectiveDailyLimit(p, todayKey);
+      const dailyLimit = Number(p.daily_limit) || 0;
       const wonToday = todayWonByPrize[p.id] || 0;
-      const dailyRemaining = effectiveLimitToday > 0 ? Math.max(0, effectiveLimitToday - wonToday) : null;
+      const dailyRemaining = dailyLimit > 0 ? Math.max(0, dailyLimit - wonToday) : null;
       return {
         ...p,
-        daily_limit: Number(p.daily_limit) || 0,
-        date_quotas: p.date_quotas ?? {},
-        effective_limit_today: effectiveLimitToday,
+        daily_limit: dailyLimit,
         won_today: wonToday,
         daily_remaining: dailyRemaining,
         won_by_date: wonByDateByPrize[p.id] || {},
@@ -624,12 +548,12 @@ export const adminListAll = createServerFn({ method: "POST" })
     
     // Sort prizes by created_at ascending
     const sortedPrizes = [...enrichedPrizes].sort(
-      (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      (a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
     );
     
     // Sort participants by created_at descending
     const sortedParticipants = [...participants].sort(
-      (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      (a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
     );
     
     return { prizes: sortedPrizes, participants: sortedParticipants, todayKey };
@@ -637,14 +561,13 @@ export const adminListAll = createServerFn({ method: "POST" })
 
 const upsertPrizeSchema = adminAuth.extend({
   id: z.string().optional().nullable(),
-  name: z.string().min(1).max(120),
-  icon: z.string().min(1).max(255).optional().default("gift"),
-  total_quantity: z.number().int().min(0).max(100000),
-  remaining_quantity: z.number().int().min(0).max(100000),
-  daily_limit: z.number().int().min(0).max(100000).optional().default(0),
-  date_quotas: z.record(z.string(), z.number().int().min(0)).optional().default({}),
-  weight: z.number().int().min(1).max(10000),
-  active: z.boolean(),
+  name: z.string().min(1, "Nome do prêmio é obrigatório").max(120),
+  icon: z.string().optional().default("gift"),
+  total_quantity: z.coerce.number().min(0).default(0),
+  remaining_quantity: z.coerce.number().min(0).default(0),
+  daily_limit: z.coerce.number().min(0).default(0),
+  weight: z.coerce.number().min(0).default(10),
+  active: z.boolean().default(true),
 });
 
 export const adminUpsertPrize = createServerFn({ method: "POST" })
@@ -664,8 +587,7 @@ export const adminUpsertPrize = createServerFn({ method: "POST" })
         icon: data.icon || "gift",
         total_quantity: data.total_quantity,
         remaining_quantity: data.remaining_quantity,
-        daily_limit: data.daily_limit ?? 0,
-        date_quotas: data.date_quotas ?? {},
+        daily_limit: data.daily_limit,
         weight: data.weight,
         active: data.active,
       };
@@ -676,8 +598,7 @@ export const adminUpsertPrize = createServerFn({ method: "POST" })
         icon: data.icon || "gift",
         total_quantity: data.total_quantity,
         remaining_quantity: data.remaining_quantity,
-        daily_limit: data.daily_limit ?? 0,
-        date_quotas: data.date_quotas ?? {},
+        daily_limit: data.daily_limit,
         weight: data.weight,
         active: data.active,
         created_at: new Date().toISOString(),
@@ -697,12 +618,11 @@ export const adminSyncAllPrizes = createServerFn({ method: "POST" })
             id: z.string().optional().nullable(),
             name: z.string(),
             icon: z.string().optional().default("gift"),
-            total_quantity: z.number(),
-            remaining_quantity: z.number(),
-            daily_limit: z.number().optional().default(0),
-            date_quotas: z.record(z.string(), z.number()).optional().default({}),
-            weight: z.number(),
-            active: z.boolean(),
+            total_quantity: z.coerce.number().default(0),
+            remaining_quantity: z.coerce.number().default(0),
+            daily_limit: z.coerce.number().default(0),
+            weight: z.coerce.number().default(10),
+            active: z.boolean().default(true),
             created_at: z.string().optional(),
           }),
         ),
@@ -717,7 +637,8 @@ export const adminSyncAllPrizes = createServerFn({ method: "POST" })
       id: p.id && p.id.trim() ? p.id.trim() : crypto.randomUUID(),
       icon: p.icon || "gift",
       daily_limit: Number(p.daily_limit) || 0,
-      date_quotas: p.date_quotas || {},
+      weight: Number(p.weight) || 10,
+      active: p.active !== false,
       created_at: p.created_at || new Date().toISOString(),
     }));
     const db = await getLocalDatabase();

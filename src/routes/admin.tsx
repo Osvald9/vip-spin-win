@@ -48,9 +48,7 @@ interface Prize {
   icon: string;
   total_quantity: number;
   remaining_quantity: number;
-  daily_limit?: number;
-  date_quotas?: Record<string, number>;
-  effective_limit_today?: number;
+  daily_limit: number;
   won_today?: number;
   daily_remaining?: number | null;
   won_by_date?: Record<string, number>;
@@ -323,12 +321,11 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         id: targetId,
         name: p.name ?? "Novo Prêmio",
         icon: p.icon ?? "gift",
-        total_quantity: p.total_quantity ?? 50,
-        remaining_quantity: p.remaining_quantity ?? (p.total_quantity ?? 50),
-        daily_limit: p.daily_limit ?? 0,
-        date_quotas: p.date_quotas ?? {},
-        weight: p.weight ?? 10,
-        active: p.active ?? true,
+        total_quantity: Number(p.total_quantity) || 0,
+        remaining_quantity: Number(p.remaining_quantity) || 0,
+        daily_limit: Number(p.daily_limit) || 0,
+        weight: Number(p.weight) || 10,
+        active: p.active !== false,
         created_at: p.created_at ?? new Date().toISOString(),
       };
 
@@ -338,9 +335,10 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         nextPrizes.push(updatedItem);
       }
 
-      // Persistência Imediata Local + Sync com o Worker
       setPrizes(nextPrizes);
-      localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(nextPrizes));
+      if (typeof window !== "undefined") {
+        localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(nextPrizes));
+      }
 
       await syncAll({ data: { pin, prizes: nextPrizes } });
       await upsert({ data: { pin, ...updatedItem } });
@@ -355,7 +353,9 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
     try {
       const filtered = prizes.filter((p) => p.id !== id);
       setPrizes(filtered);
-      localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(filtered));
+      if (typeof window !== "undefined") {
+        localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(filtered));
+      }
 
       await del({ data: { pin, id } });
       await syncAll({ data: { pin, prizes: filtered } });
@@ -368,7 +368,7 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
   async function resetToEventDefaults() {
     if (
       !confirm(
-        "Deseja restaurar a configuração padrão do evento de 13 a 16 de Agosto (Copo Amarelo 500/dia, Chaveiros 75/dia, Canetas 30/dia, Lixeiras 25/24, Copo Térmico 20/dia, Bonés 20/dia, Mensalidade 2/dia)? Isso substituirá as edições atuais.",
+        "Deseja restaurar a configuração padrão do evento (Copo Amarelo 500/dia, Chaveiro 75/dia, Caneta 30/dia, Lixeira 25/dia, Copo Térmico 20/dia, Boné 20/dia, Mensalidade 2/dia)? Isso substituirá as edições atuais.",
       )
     )
       return;
@@ -381,12 +381,6 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         total_quantity: 2000,
         remaining_quantity: 2000,
         daily_limit: 500,
-        date_quotas: {
-          "2026-08-13": 500,
-          "2026-08-14": 500,
-          "2026-08-15": 500,
-          "2026-08-16": 500,
-        },
         weight: 73,
         active: true,
         created_at: "2026-08-11T18:28:00.000Z",
@@ -398,12 +392,6 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         total_quantity: 300,
         remaining_quantity: 300,
         daily_limit: 75,
-        date_quotas: {
-          "2026-08-13": 75,
-          "2026-08-14": 75,
-          "2026-08-15": 75,
-          "2026-08-16": 75,
-        },
         weight: 11,
         active: true,
         created_at: "2026-08-11T18:28:00.000Z",
@@ -415,12 +403,6 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         total_quantity: 120,
         remaining_quantity: 120,
         daily_limit: 30,
-        date_quotas: {
-          "2026-08-13": 30,
-          "2026-08-14": 30,
-          "2026-08-15": 30,
-          "2026-08-16": 30,
-        },
         weight: 5,
         active: true,
         created_at: "2026-08-11T18:28:00.000Z",
@@ -432,12 +414,6 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         total_quantity: 97,
         remaining_quantity: 97,
         daily_limit: 25,
-        date_quotas: {
-          "2026-08-13": 25,
-          "2026-08-14": 24,
-          "2026-08-15": 24,
-          "2026-08-16": 24,
-        },
         weight: 4,
         active: true,
         created_at: "2026-08-11T18:28:00.000Z",
@@ -449,12 +425,6 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         total_quantity: 80,
         remaining_quantity: 80,
         daily_limit: 20,
-        date_quotas: {
-          "2026-08-13": 20,
-          "2026-08-14": 20,
-          "2026-08-15": 20,
-          "2026-08-16": 20,
-        },
         weight: 3,
         active: true,
         created_at: "2026-08-13T13:45:00.000Z",
@@ -466,12 +436,6 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         total_quantity: 80,
         remaining_quantity: 80,
         daily_limit: 20,
-        date_quotas: {
-          "2026-08-13": 20,
-          "2026-08-14": 20,
-          "2026-08-15": 20,
-          "2026-08-16": 20,
-        },
         weight: 3,
         active: true,
         created_at: "2026-08-13T13:45:00.000Z",
@@ -483,12 +447,6 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         total_quantity: 8,
         remaining_quantity: 8,
         daily_limit: 2,
-        date_quotas: {
-          "2026-08-13": 2,
-          "2026-08-14": 2,
-          "2026-08-15": 2,
-          "2026-08-16": 2,
-        },
         weight: 1,
         active: true,
         created_at: "2026-08-13T13:45:00.000Z",
@@ -496,9 +454,11 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
     ];
 
     setPrizes(defaultPrizes);
-    localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(defaultPrizes));
+    if (typeof window !== "undefined") {
+      localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(defaultPrizes));
+    }
     await syncAll({ data: { pin, prizes: defaultPrizes } });
-    alert("✅ Configuração padrão do evento restaurada!");
+    alert("✅ Configuração padrão de brindes restaurada!");
   }
 
   function exportBackupJSON() {
@@ -559,7 +519,6 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
     await refresh();
   }
 
-  // Estatísticas calculadas
   const stats = useMemo(() => {
     const todayParts = participants.filter((p) => formatBRDate(p.created_at) === todayStr);
     const todayWins = todayParts.filter((p) => p.won).length;
@@ -567,15 +526,7 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
     const totalRemaining = prizes.reduce((s, p) => s + p.remaining_quantity, 0);
     const totalDailyLimit = prizes
       .filter((p) => p.active)
-      .reduce((s, p) => {
-        const quotas = p.date_quotas;
-        const hasSpecificDates = quotas && typeof quotas === "object" && Object.keys(quotas).length > 0;
-        if (hasSpecificDates) {
-          const customLimit = quotas[todayKey];
-          return s + (typeof customLimit === "number" ? customLimit : 0);
-        }
-        return s + (p.daily_limit || 0);
-      }, 0);
+      .reduce((s, p) => s + (Number(p.daily_limit) || 0), 0);
 
     return {
       todayParticipants: todayParts.length,
@@ -585,7 +536,7 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
       totalRemaining,
       totalDailyLimit,
     };
-  }, [participants, prizes, todayStr, todayKey]);
+  }, [participants, prizes, todayStr]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -598,99 +549,81 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
             <h1 className="text-xl font-black">Painel do Caça-Níquel</h1>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5 text-primary" /> Ciclo de Hoje: {todayStr} (encerra às 02:00)
-            </span>
+            <button
+              onClick={() => void refresh()}
+              disabled={loading}
+              className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted transition"
+            >
+              Atualizar
+            </button>
             <button
               onClick={onLogout}
-              className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm hover:bg-muted font-semibold transition"
+              className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted transition flex items-center gap-1"
             >
-              <LogOut className="h-4 w-4" /> Sair
+              <LogOut className="h-3.5 w-3.5" /> Sair
             </button>
           </div>
-        </div>
-
-        {/* Resumo do dia no Header */}
-        <div className="mx-auto max-w-6xl px-6 pb-4">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-xl border border-border bg-card p-3 shadow-xs">
-              <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                <Users className="h-3.5 w-3.5 text-primary" /> Cadastros Hoje
-              </div>
-              <div className="mt-1 text-xl font-black">
-                {stats.todayParticipants}{" "}
-                <span className="text-xs font-normal text-muted-foreground">
-                  ({stats.totalParticipants} total)
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-3 shadow-xs">
-              <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                <Gift className="h-3.5 w-3.5 text-primary" /> Brindes Hoje
-              </div>
-              <div className="mt-1 text-xl font-black">
-                {stats.todayWins}{" "}
-                <span className="text-xs font-normal text-muted-foreground">
-                  ({stats.totalWins} total)
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-3 shadow-xs">
-              <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                <Calendar className="h-3.5 w-3.5 text-primary" /> Cota Total de Hoje
-              </div>
-              <div className="mt-1 text-xl font-black">
-                {stats.totalDailyLimit > 0 ? (
-                  <>
-                    {stats.todayWins} / {stats.totalDailyLimit}{" "}
-                    <span className="text-xs font-normal text-muted-foreground">
-                      ({Math.max(0, stats.totalDailyLimit - stats.todayWins)} restam)
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-sm font-semibold text-muted-foreground">Livre / Sem limite</span>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-3 shadow-xs">
-              <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Estoque Geral
-              </div>
-              <div className="mt-1 text-xl font-black">
-                {stats.totalRemaining}{" "}
-                <span className="text-xs font-normal text-muted-foreground">unidades</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Abas */}
-        <div className="mx-auto flex max-w-6xl gap-2 px-6 pb-3">
-          {(["prizes", "participants"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded-full px-5 py-2 text-sm font-bold transition ${
-                tab === t
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              {t === "prizes" ? "🎁 Prêmios & Cotas por Data" : `👥 Participantes (${participants.length})`}
-            </button>
-          ))}
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-8">
-        {loading ? (
-          <div className="flex justify-center py-20">
+      <main className="mx-auto max-w-6xl space-y-6 p-6">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <StatCard
+            label="Participantes Hoje"
+            value={stats.todayParticipants}
+            hint={`Ciclo: ${todayStr}`}
+            icon={<Users className="h-4 w-4 text-primary" />}
+          />
+          <StatCard
+            label="Ganhadores Hoje"
+            value={stats.todayWins}
+            hint={`Total evento: ${stats.totalWins}`}
+            icon={<Gift className="h-4 w-4 text-primary" />}
+          />
+          <StatCard
+            label="Cota Diária Total"
+            value={stats.totalDailyLimit > 0 ? `${stats.todayWins}/${stats.totalDailyLimit}` : "Livre"}
+            hint={stats.totalDailyLimit > 0 ? `${Math.max(0, stats.totalDailyLimit - stats.todayWins)} restantes hoje` : "Sem trava diária"}
+            icon={<Calendar className="h-4 w-4 text-primary" />}
+          />
+          <StatCard
+            label="Estoque Geral"
+            value={stats.totalRemaining}
+            hint={`Restante de todos os brindes`}
+            icon={<Package className="h-4 w-4 text-primary" />}
+          />
+        </div>
+
+        <div className="flex gap-2 border-b border-border pb-2">
+          <button
+            onClick={() => setTab("prizes")}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              tab === "prizes"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Gift className="h-4 w-4" /> Configurar Brindes ({prizes.length})
+          </button>
+          <button
+            onClick={() => setTab("participants")}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              tab === "participants"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Users className="h-4 w-4" /> Participantes ({participants.length})
+          </button>
+        </div>
+
+        {loading && (
+          <div className="flex items-center justify-center py-10">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : tab === "prizes" ? (
+        )}
+
+        {!loading && tab === "prizes" && (
           <PrizesTab
             pin={pin}
             prizes={prizes}
@@ -699,9 +632,10 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
             onResetDefaults={resetToEventDefaults}
             onExportBackup={exportBackupJSON}
             onImportBackup={importBackupJSON}
-            todayKey={todayKey}
           />
-        ) : (
+        )}
+
+        {!loading && tab === "participants" && (
           <ParticipantsTab
             participants={participants}
             onDeleteSelected={deleteSelectedParticipants}
@@ -727,16 +661,14 @@ function PrizesTab({
   onResetDefaults,
   onExportBackup,
   onImportBackup,
-  todayKey,
 }: {
   pin: string;
   prizes: Prize[];
-  onSave: (p: Partial<Prize>) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
-  onResetDefaults: () => Promise<void>;
+  onSave: (p: Partial<Prize> & { id?: string }) => void | Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
+  onResetDefaults: () => void | Promise<void>;
   onExportBackup: () => void;
   onImportBackup: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  todayKey: string;
 }) {
   const [drafts, setDrafts] = useState<Record<string, Prize>>(() =>
     Object.fromEntries(prizes.map((p) => [p.id, p])),
@@ -752,23 +684,21 @@ function PrizesTab({
     total_quantity: 50,
     remaining_quantity: 50,
     daily_limit: 10,
-    date_quotas: {},
     weight: 10,
     active: true,
   });
 
   return (
     <div className="space-y-6">
-      {/* Barra de Ferramentas de Backup e Reset */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/40 p-4 rounded-2xl border border-border">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={onResetDefaults}
             className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold hover:bg-muted transition"
-            title="Restaura os brindes e cotas oficiais dos dias 13 a 16"
+            title="Restaura os brindes padrão com as cotas diárias oficiais"
           >
-            🔄 Restaurar Padrão do Evento (13 a 16/08)
+            🔄 Restaurar Padrão do Evento
           </button>
           <button
             type="button"
@@ -783,20 +713,18 @@ function PrizesTab({
           </label>
         </div>
         <span className="text-xs text-muted-foreground font-semibold">
-          💡 Todas as alterações ficam salvas de forma permanente.
+          💡 A quantidade por dia é automática para todos os dias do evento.
         </span>
       </div>
 
-      {/* Box de Informações sobre o Limite Diário e por Data */}
       <div className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-4 text-sm flex items-start gap-3">
         <Gift className="h-5 w-5 text-primary shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <strong className="font-bold text-base">Separação de Brindes por Dia & Cotas por Data:</strong>
+          <strong className="font-bold text-base">Controle Diário de Brindes:</strong>
           <div className="text-xs text-muted-foreground leading-relaxed">
-            • <strong>Chance Geral de Vitória:</strong> Fixada em <strong>60% de chance</strong> nos dias com brindes disponíveis (e 0% em dias sem brindes ou com cotas esgotadas).<br />
-            • <strong>Limite/Dia Padrão:</strong> Quantidade liberada por dia para dias normais (ex: 10 un/dia).<br />
-            • <strong>Cotas Específicas por Data:</strong> Clique no botão <span className="font-bold text-primary">📅 Cotas por Data</span> em qualquer prêmio para definir valores personalizados para datas específicas (ex: 13 a 16 de Agosto).<br />
-            • <strong>Ciclo de 24h:</strong> O ciclo encerra às <strong>02:00 da manhã</strong> para acompanhar eventos noturnos.
+            • <strong>Chance Geral de Vitória:</strong> Fixada em <strong>60% de chance</strong> nos dias com brindes disponíveis no estoque do dia.<br />
+            • <strong>Qtd por Dia (Limite Diário):</strong> Quantidade liberada por dia (ex: 500/dia, 20/dia). Não precisa selecionar datas — o sistema reseta a cota a cada ciclo de 24h automaticamente!<br />
+            • <strong>Ciclo de 24h:</strong> O ciclo diário encerra às <strong>02:00 da manhã</strong>.
           </div>
         </div>
       </div>
@@ -809,7 +737,6 @@ function PrizesTab({
           pin={pin}
           prize={newPrize as Prize}
           allPrizes={prizes}
-          todayKey={todayKey}
           onChange={(p) => setNewPrize((prev) => ({ ...prev, ...p }))}
           onSave={async () => {
             if (!newPrize.name || !newPrize.name.trim()) return alert("Informe o nome do prêmio.");
@@ -824,7 +751,6 @@ function PrizesTab({
               total_quantity: 50,
               remaining_quantity: 50,
               daily_limit: 10,
-              date_quotas: {},
               weight: 10,
               active: true,
             });
@@ -853,7 +779,6 @@ function PrizesTab({
                 pin={pin}
                 prize={drafts[p.id] ?? p}
                 allPrizes={prizes}
-                todayKey={todayKey}
                 onChange={(x) =>
                   setDrafts((d) => ({
                     ...d,
@@ -875,7 +800,6 @@ function PrizeRow({
   pin,
   prize,
   allPrizes,
-  todayKey,
   onChange,
   onSave,
   onDelete,
@@ -884,56 +808,32 @@ function PrizeRow({
   pin: string;
   prize: Prize;
   allPrizes: Prize[];
-  todayKey: string;
   onChange: (p: Partial<Prize>) => void;
   onSave: () => void | Promise<void>;
   onDelete?: () => void;
   isNew?: boolean;
 }) {
-  const [showDates, setShowDates] = useState(false);
-  const [inputDate, setInputDate] = useState("");
-  const [inputQty, setInputQty] = useState(20);
-
-  const dateQuotas = prize.date_quotas || {};
-  const dateEntries = Object.entries(dateQuotas).sort(([a], [b]) => a.localeCompare(b));
-  const customCount = dateEntries.length;
-
-  const hasCustomToday = typeof dateQuotas[todayKey] === "number";
-  const effectiveLimit = hasCustomToday ? dateQuotas[todayKey] : (Number(prize.daily_limit) || 0);
   const wonToday = prize.won_today || 0;
-  const isDailyExhausted = effectiveLimit > 0 && wonToday >= effectiveLimit;
+  const dailyLimit = Number(prize.daily_limit) || 0;
+  const isDailyExhausted = dailyLimit > 0 && wonToday >= dailyLimit;
   const isTotalExhausted = prize.remaining_quantity <= 0;
 
-  // Cálculo de Porcentagens
   const activePrizes = allPrizes.filter((p) => p.active);
   const totalWeight = activePrizes.reduce((s, p) => s + (p.weight || 0), 0);
   const winShare = totalWeight > 0 && prize.active ? ((prize.weight / totalWeight) * 100).toFixed(1) : "0";
   const spinChance = totalWeight > 0 && prize.active ? ((prize.weight / totalWeight) * 60).toFixed(1) : "0";
 
-  function addOrUpdateDate(dateKey: string, qty: number) {
-    if (!dateKey) return;
-    const nextQuotas = { ...dateQuotas, [dateKey]: qty };
-    onChange({ date_quotas: nextQuotas });
-  }
-
-  function removeDate(dateKey: string) {
-    const nextQuotas = { ...dateQuotas };
-    delete nextQuotas[dateKey];
-    onChange({ date_quotas: nextQuotas });
-  }
-
   return (
-    <div className="flex flex-col gap-4 border-b border-border/20 pb-4 sm:border-0 sm:pb-0">
-      <div className="grid gap-3 sm:grid-cols-[auto_1fr_auto_auto_auto_auto_auto_auto]">
-        {/* Preview do Ícone */}
+    <div className="flex flex-col gap-3">
+      <div className="grid gap-3 sm:grid-cols-[auto_1.5fr_auto_auto_auto_auto_auto_auto]">
         <div className="flex items-center justify-center">
           <div className="relative grid h-12 w-12 place-items-center rounded-lg border border-border bg-muted overflow-hidden">
             <SlotIcon name={prize.icon ?? "gift"} className="h-10 w-10 object-contain mx-auto" />
           </div>
         </div>
 
-        {/* Nome do prêmio */}
         <div className="flex flex-col gap-1 w-full justify-center">
+          <label className="text-xs text-muted-foreground font-semibold">Nome do Prêmio</label>
           <input
             type="text"
             placeholder="Nome do prêmio"
@@ -943,7 +843,6 @@ function PrizeRow({
           />
         </div>
 
-        {/* Quantidades e % */}
         <NumberField
           label="Estoque Total"
           value={prize.total_quantity}
@@ -960,21 +859,20 @@ function PrizeRow({
           onChange={(v) => onChange({ remaining_quantity: v })}
         />
         <NumberField
-          label="Limite/Dia (Padrão)"
+          label="Qtd por Dia"
           helper="0 = livre"
           value={prize.daily_limit ?? 0}
           onChange={(v) => onChange({ daily_limit: v })}
         />
         <NumberField
           label="Peso / Chance"
-          helper={prize.active ? `${winShare}% dos ganhadores (${spinChance}% no giro)` : "Inativo"}
-          value={prize.weight}
+          helper={prize.active ? `${winShare}% dos brindes (${spinChance}% no giro)` : "Inativo"}
+          value={prize.weight ?? 10}
           onChange={(v) => onChange({ weight: v })}
         />
 
-        {/* Ativo */}
         <div className="flex items-center justify-start sm:justify-center">
-          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-sm cursor-pointer select-none font-bold">
             <input
               type="checkbox"
               checked={prize.active ?? true}
@@ -985,9 +883,9 @@ function PrizeRow({
           </label>
         </div>
 
-        {/* Ações */}
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => onSave()}
             className="btn-vip btn-vip-hover flex-1 sm:flex-none flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm"
           >
@@ -995,8 +893,10 @@ function PrizeRow({
           </button>
           {onDelete && (
             <button
+              type="button"
               onClick={onDelete}
               className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-destructive hover:bg-destructive/20"
+              title="Excluir Prêmio"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -1004,233 +904,30 @@ function PrizeRow({
         </div>
       </div>
 
-      {/* Badges de Status e Botão de Cotas por Data */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-        <div className="flex flex-wrap items-center gap-2">
-          {customCount > 0 && !hasCustomToday ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-400">
-              <Calendar className="h-3.5 w-3.5" />
-              Não agendado para hoje (liberado em {dateEntries.map(([k]) => formatBRDateFromKey(k)).join(", ")})
-            </span>
-          ) : effectiveLimit > 0 ? (
+      {!isNew && (
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/40 text-xs">
+          {dailyLimit > 0 ? (
             isDailyExhausted ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/15 px-3 py-1 text-xs font-bold text-destructive">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/15 px-3 py-1 font-bold text-destructive">
                 <AlertCircle className="h-3.5 w-3.5" />
-                {hasCustomToday ? "Cota de hoje esgotada (específica da data)" : "Cota diária de hoje esgotada"} ({wonToday}/{effectiveLimit} saíram)
+                Cota de hoje esgotada ({wonToday}/{dailyLimit} entregues hoje)
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 font-bold text-emerald-700 dark:text-emerald-400">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                Hoje: {wonToday} de {effectiveLimit} saíram ({Math.max(0, effectiveLimit - wonToday)} disponíveis hoje)
-                {hasCustomToday && " [Cota da data ativa]"}
+                Hoje: {wonToday} de {dailyLimit} entregues ({Math.max(0, dailyLimit - wonToday)} disponíveis hoje)
               </span>
             )
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-              Sem limite diário · {wonToday} saíram hoje
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 font-medium text-muted-foreground">
+              Sem limite diário · {wonToday} entregues hoje
             </span>
           )}
 
-          <span className="text-xs text-muted-foreground">
-            · Total do evento: {prize.remaining_quantity} de {prize.total_quantity}
-            {isTotalExhausted && " (Zerado)"}
+          <span className="text-muted-foreground">
+            · Total do evento: {prize.remaining_quantity} restantes de {prize.total_quantity}
+            {isTotalExhausted && " (Estoque Zerado)"}
           </span>
-        </div>
-
-        {/* Botão para Expandir Configuração por Data */}
-        <button
-          type="button"
-          onClick={() => setShowDates(!showDates)}
-          className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
-            showDates
-              ? "bg-primary text-primary-foreground border-primary"
-              : customCount > 0
-              ? "border-primary/60 bg-primary/10 text-foreground hover:bg-primary/20"
-              : "border-border bg-muted/50 text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          <CalendarDays className="h-4 w-4 text-primary" />
-          {customCount > 0 ? (
-            <span>📅 {customCount} data(s) personalizada(s)</span>
-          ) : (
-            <span>📅 Editar Cotas por Data</span>
-          )}
-          {showDates ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        </button>
-      </div>
-
-      {/* Painel Expansível de Cotas por Data Específica */}
-      {showDates && (
-        <div className="mt-2 rounded-2xl border-2 border-primary/40 bg-card p-4 space-y-4 shadow-sm animate-in fade-in slide-in-from-top-2">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
-            <div>
-              <h4 className="font-bold text-sm flex items-center gap-1.5">
-                <Calendar className="h-4 w-4 text-primary" /> Cotas Específicas por Data para "{prize.name || "este prêmio"}"
-              </h4>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Defina quantidades exatas para cada dia do evento (ex: 20 un no dia 11/08, 40 un no dia 12/08).
-              </p>
-            </div>
-            <span className="text-xs text-muted-foreground">
-              Limite padrão para outros dias: <strong>{prize.daily_limit || 0} un/dia</strong>
-            </span>
-          </div>
-
-          {/* Formulário de Inclusão de Data */}
-          <div className="flex flex-wrap items-end gap-3 bg-muted/40 p-3 rounded-xl border border-border">
-            <label className="flex flex-col gap-1 text-xs">
-              <span className="font-bold text-foreground">Escolher Data:</span>
-              <input
-                type="date"
-                value={inputDate}
-                onChange={(e) => setInputDate(e.target.value)}
-                className="rounded-lg border border-border bg-input px-3 py-2 text-xs font-semibold focus:border-primary focus:outline-none"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 text-xs">
-              <span className="font-bold text-foreground">Quantidade de Brindes:</span>
-              <input
-                type="number"
-                min={0}
-                value={inputQty}
-                onChange={(e) => setInputQty(Number(e.target.value))}
-                className="w-28 rounded-lg border border-border bg-input px-3 py-2 text-xs font-bold focus:border-primary focus:outline-none"
-              />
-            </label>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (!inputDate) return alert("Selecione uma data no calendário.");
-                addOrUpdateDate(inputDate, inputQty);
-                setInputDate("");
-              }}
-              className="btn-vip btn-vip-hover flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs"
-            >
-              <Plus className="h-3.5 w-3.5" /> Adicionar / Definir Data
-            </button>
-
-            {/* Botões Rápidos */}
-            <div className="flex items-center gap-1.5 ml-auto text-xs">
-              <span className="text-muted-foreground font-semibold">Atalhos:</span>
-              <button
-                type="button"
-                onClick={() => addOrUpdateDate(getQuickDateKey(0), inputQty)}
-                className="rounded-lg border border-border bg-card px-2 py-1 hover:bg-muted font-bold"
-              >
-                Hoje ({formatBRDateFromKey(getQuickDateKey(0))})
-              </button>
-              <button
-                type="button"
-                onClick={() => addOrUpdateDate(getQuickDateKey(1), inputQty)}
-                className="rounded-lg border border-border bg-card px-2 py-1 hover:bg-muted font-bold"
-              >
-                Amanhã ({formatBRDateFromKey(getQuickDateKey(1))})
-              </button>
-              <button
-                type="button"
-                onClick={() => addOrUpdateDate(getQuickDateKey(2), inputQty)}
-                className="rounded-lg border border-border bg-card px-2 py-1 hover:bg-muted font-bold"
-              >
-                +2 Dias ({formatBRDateFromKey(getQuickDateKey(2))})
-              </button>
-            </div>
-          </div>
-
-          {/* Tabela de Datas Configuradas */}
-          {dateEntries.length > 0 ? (
-            <div className="overflow-x-auto rounded-xl border border-border bg-card">
-              <table className="w-full text-xs">
-                <thead className="bg-muted/50 text-muted-foreground uppercase tracking-wider text-[11px] text-left">
-                  <tr>
-                    <th className="px-4 py-2.5">Data do Evento</th>
-                    <th className="px-4 py-2.5">Cota Definida</th>
-                    <th className="px-4 py-2.5">Entregues neste Dia</th>
-                    <th className="px-4 py-2.5">Restantes no Dia</th>
-                    <th className="px-4 py-2.5">Status</th>
-                    <th className="px-4 py-2.5 text-right">Ação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dateEntries.map(([dateKey, quota]) => {
-                    const isToday = dateKey === todayKey;
-                    const wonOnDate = prize.won_by_date?.[dateKey] || 0;
-                    const remainingOnDate = Math.max(0, quota - wonOnDate);
-                    const isExhausted = wonOnDate >= quota;
-
-                    return (
-                      <tr key={dateKey} className={`border-t border-border ${isToday ? "bg-primary/5 font-semibold" : ""}`}>
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm">{formatBRDateFromKey(dateKey)}</span>
-                            {isToday && (
-                              <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-black uppercase text-primary-foreground">
-                                Hoje
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-muted-foreground font-mono">{dateKey}</span>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <input
-                            type="number"
-                            min={0}
-                            value={quota}
-                            onChange={(e) => addOrUpdateDate(dateKey, Number(e.target.value))}
-                            className="w-20 rounded-md border border-border bg-input px-2 py-1 text-xs font-bold focus:border-primary focus:outline-none"
-                          />{" "}
-                          <span className="text-muted-foreground">un</span>
-                        </td>
-                        <td className="px-4 py-2.5 font-bold">
-                          {wonOnDate} un
-                        </td>
-                        <td className="px-4 py-2.5 font-bold">
-                          {remainingOnDate} un
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {isExhausted ? (
-                            <span className="rounded-full bg-destructive/15 px-2 py-0.5 font-bold text-destructive">
-                              🔴 Esgotado
-                            </span>
-                          ) : (
-                            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-bold text-emerald-700 dark:text-emerald-400">
-                              🟢 Disponível ({remainingOnDate} restam)
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <button
-                            type="button"
-                            onClick={() => removeDate(dateKey)}
-                            className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-destructive hover:bg-destructive/20 font-semibold"
-                            title="Remover data personalizada"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 inline" /> Remover
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="py-6 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
-              Nenhuma data personalizada configurada ainda. Este brinde usará o limite diário padrão (<strong>{prize.daily_limit || 0} un/dia</strong>).
-            </div>
-          )}
-
-          <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-            <span>💡 <em>Lembre-se de clicar no botão "Salvar" do prêmio acima para persistir as alterações de datas.</em></span>
-            <button
-              type="button"
-              onClick={() => onSave()}
-              className="btn-vip btn-vip-hover flex items-center gap-1 rounded-lg px-4 py-1.5 font-bold"
-            >
-              <Save className="h-3.5 w-3.5" /> Salvar Prêmio e Datas
-            </button>
-          </div>
         </div>
       )}
     </div>
