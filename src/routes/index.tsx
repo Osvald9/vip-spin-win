@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import confetti from "canvas-confetti";
-import { Loader2, Trophy, PartyPopper, RotateCcw, Wifi, Coins, Flame, Lock, Gamepad2, Brain, Play } from "lucide-react";
+import { Loader2, Trophy, PartyPopper, RotateCcw, Wifi, Coins, Flame, Lock, Gamepad2, Brain, Play, Gift, Sparkles } from "lucide-react";
 
 import { registerParticipant, spinSlot, listActivePrizes, adminSyncAllPrizes } from "@/lib/slot.functions";
 import { SlotReel } from "@/components/slot/SlotReel";
@@ -142,9 +142,21 @@ function Kiosk() {
     return (
       <div className="min-h-screen w-full bg-white text-black flex flex-col items-center justify-center p-3 sm:p-6">
         <main className="w-full max-w-3xl flex flex-col items-center text-center">
-          {/* Logo diretamente colada no topo do card */}
-          <div className="mb-3">
-            <img src="/logo-cnx.png" alt="CNX Logo" className="h-16 sm:h-22 max-w-xs object-contain drop-shadow-sm" />
+          {/* Logo */}
+          <div className="mb-2">
+            <img src="/logo-cnx.png" alt="CNX Logo" className="h-14 sm:h-20 max-w-xs object-contain drop-shadow-sm" />
+          </div>
+
+          {/* Frase Chamativa em Destaque */}
+          <div
+            className="mb-3.5 inline-flex items-center justify-center gap-2 rounded-2xl bg-yellow border-[4px] border-black px-5 py-2.5 shadow-[5px_5px_0_0_#000] w-full max-w-2xl"
+            style={{ animation: "big-pulse 1.4s ease-in-out infinite" }}
+          >
+            <Gift className="h-6 w-6 sm:h-8 sm:w-8 text-black shrink-0 animate-bounce" />
+            <span className="text-xl sm:text-3xl md:text-4xl font-black uppercase tracking-tight text-black">
+              CONCORRA A BRINDES GRÁTIS!
+            </span>
+            <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-black shrink-0" />
           </div>
 
           <div className="rounded-[2.5rem] border-[8px] border-black bg-white p-5 sm:p-8 w-full shadow-[12px_12px_0_0_#000] flex flex-col items-center">
@@ -152,11 +164,11 @@ function Kiosk() {
               Ativação Stand Conexão VIP
             </div>
 
-            <h1 className="text-3xl sm:text-5xl font-black text-black leading-tight">
+            <h1 className="text-2xl sm:text-4xl font-black text-black leading-tight">
               Escaneie o QR Code
             </h1>
 
-            <p className="text-base sm:text-xl font-bold text-black/75 mt-0.5">
+            <p className="text-sm sm:text-lg font-bold text-black/75 mt-0.5">
               Aponte a câmera do seu celular para participar
             </p>
 
