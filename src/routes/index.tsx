@@ -315,64 +315,78 @@ function ResultScreen({
     : (result.deliveredPrize || result.prize?.name || "Prêmio Especial");
 
   return (
-    <div className="min-h-screen w-full bg-white text-black">
-      <TopBar />
-      <div className="mx-auto flex max-w-2xl flex-col items-center px-6 pb-10 pt-6 text-center">
-        {result.won ? (
-          <>
-            <div
-              className="grid h-24 w-24 place-items-center rounded-3xl border-4 border-black bg-yellow shadow-sm"
-              style={{ animation: "bounce-in 0.6s ease" }}
-            >
-              <PartyPopper className="h-12 w-12 text-black" strokeWidth={2.5} />
-            </div>
+    <div className="min-h-screen w-full bg-white text-black flex flex-col items-center justify-center p-4 sm:p-8">
+      <main className="mx-auto flex w-full max-w-2xl flex-col items-center text-center">
+        {/* Logo diretamente colada no topo */}
+        <div className="mb-4">
+          <img src="/logo-cnx.png" alt="CNX Logo" className="h-16 sm:h-22 max-w-xs object-contain drop-shadow-sm" />
+        </div>
 
-            <h1 className="mt-4 text-3xl sm:text-4xl font-black leading-tight">
-              Parabéns!
-              <br />
-              <span className="rounded-xl bg-yellow px-3 py-1 inline-block mt-2">
-                Você Ganhou!
-              </span>
-            </h1>
-
-            {/* Card Detalhado do Prêmio Conquistado */}
-            <div className="mt-6 flex flex-col items-center justify-center gap-4 rounded-3xl border-4 border-black bg-yellow p-6 w-full shadow-md">
-              <div className="text-center w-full">
-                <div className="text-xs font-black uppercase tracking-widest text-black/70">
-                  Seu Brinde
-                </div>
-                <div className="mt-2 font-display text-2xl sm:text-4xl font-black text-black">
-                  {displayTitle}
-                </div>
-
-                <p className="mt-6 text-sm sm:text-base font-black text-black">
-                  Retire o seu brinde com a nossa equipe no stand!
-                </p>
+        <div className="w-full flex flex-col items-center">
+          {result.won ? (
+            <>
+              <div
+                className="grid h-28 w-28 place-items-center rounded-[2rem] border-[5px] border-black bg-yellow shadow-md"
+                style={{ animation: "bounce-in 0.6s ease" }}
+              >
+                <PartyPopper className="h-14 w-14 text-black" strokeWidth={2.5} />
               </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="grid h-24 w-24 place-items-center rounded-3xl border-4 border-black bg-white">
-              <Trophy className="h-12 w-12 text-black" strokeWidth={2.5} />
-            </div>
-            <h1 className="mt-5 text-3xl sm:text-4xl font-black leading-tight">
-              Ainda não foi dessa vez,<br />
-              <span className="rounded-lg bg-yellow px-2">mas obrigado por participar!</span>
-            </h1>
-            <p className="mt-4 max-w-md text-base sm:text-lg font-bold text-black">
-              Continue acompanhando a Conexão VIP e aproveite as ofertas exclusivas no stand!
-            </p>
-          </>
-        )}
 
-        <button
-          onClick={onRestart}
-          className="btn-yellow btn-yellow-hover mt-8 w-full rounded-2xl py-5 text-xl font-black"
-        >
-          <RotateCcw className="mr-2 inline h-6 w-6" /> Nova participação
-        </button>
-      </div>
+              <h1 className="mt-5 text-4xl sm:text-5xl font-black leading-tight">
+                Parabéns!
+                <br />
+                <span className="rounded-2xl bg-yellow px-4 py-1.5 inline-block mt-2 border-2 border-black">
+                  Você Ganhou!
+                </span>
+              </h1>
+
+              {/* Card Detalhado do Prêmio Conquistado */}
+              <div className="mt-6 flex flex-col items-center justify-center gap-4 rounded-[2rem] border-[6px] border-black bg-yellow p-6 sm:p-8 w-full shadow-[8px_8px_0_0_#000]">
+                <div className="text-center w-full">
+                  <div className="text-sm font-black uppercase tracking-widest text-black/70">
+                    Seu Brinde
+                  </div>
+                  <div className="mt-2 font-display text-3xl sm:text-5xl font-black text-black">
+                    {displayTitle}
+                  </div>
+
+                  <p className="mt-6 text-base sm:text-lg font-black text-black">
+                    Retire o seu brinde com a nossa equipe no stand!
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid h-28 w-28 place-items-center rounded-[2rem] border-[5px] border-black bg-white shadow-md">
+                <Trophy className="h-14 w-14 text-black" strokeWidth={2.5} />
+              </div>
+              <h1 className="mt-5 text-3xl sm:text-5xl font-black leading-tight">
+                Ainda não foi dessa vez,<br />
+                <span className="rounded-2xl bg-yellow px-3 py-1 inline-block mt-2 border-2 border-black">
+                  mas obrigado por participar!
+                </span>
+              </h1>
+              <p className="mt-4 max-w-lg text-lg sm:text-xl font-bold text-black/80">
+                Continue acompanhando a Conexão VIP e aproveite as ofertas exclusivas no stand!
+              </p>
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={onRestart}
+            className="btn-yellow btn-yellow-hover mt-8 w-full rounded-2xl py-6 sm:py-7 text-2xl sm:text-3xl font-black uppercase tracking-wider shadow-lg"
+            style={{ animation: "big-pulse 1.4s ease-in-out infinite" }}
+          >
+            <RotateCcw className="mr-3 inline h-8 w-8" /> NOVA PARTICIPAÇÃO
+          </button>
+        </div>
+      </main>
+
+      <footer className="mt-6 text-center text-xs font-bold text-black/40">
+        Conexão VIP · Todos os direitos reservados
+      </footer>
     </div>
   );
 }
