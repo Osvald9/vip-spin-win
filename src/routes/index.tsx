@@ -143,9 +143,9 @@ function Kiosk() {
       <div className="min-h-screen w-full bg-white text-black flex flex-col justify-between">
         <TopBar />
 
-        <main className="mx-auto flex w-full max-w-2xl flex-col items-center px-4 py-2 text-center">
-          <div className="rounded-[2.5rem] border-[6px] border-black bg-white p-6 sm:p-10 w-full shadow-[10px_10px_0_0_#000] flex flex-col items-center">
-            <div className="inline-block rounded-full bg-yellow border-2 border-black px-5 py-1.5 text-xs sm:text-base font-black uppercase tracking-widest text-black mb-3">
+        <main className="mx-auto flex w-full max-w-2xl flex-col items-center px-4 pt-1 pb-2 text-center">
+          <div className="rounded-[2.5rem] border-[6px] border-black bg-white p-6 sm:p-8 w-full shadow-[10px_10px_0_0_#000] flex flex-col items-center">
+            <div className="inline-block rounded-full bg-yellow border-2 border-black px-5 py-1.5 text-xs sm:text-base font-black uppercase tracking-widest text-black mb-2">
               Ativação Stand Conexão VIP
             </div>
 
@@ -157,7 +157,7 @@ function Kiosk() {
               Aponte a câmera do seu celular para participar
             </p>
 
-            <div className="mt-6 w-full flex justify-center">
+            <div className="mt-4 w-full flex justify-center">
               <div className="relative overflow-hidden rounded-3xl border-[5px] border-black bg-white p-4 sm:p-6 shadow-md w-full max-w-[480px]">
                 <img
                   src="/qr-code.jpeg"
@@ -170,7 +170,7 @@ function Kiosk() {
             <button
               type="button"
               onClick={() => setStage("slot")}
-              className="btn-yellow btn-yellow-hover mt-8 w-full rounded-2xl py-6 sm:py-7 text-3xl sm:text-4xl font-black uppercase tracking-wider shadow-lg"
+              className="btn-yellow btn-yellow-hover mt-6 w-full rounded-2xl py-6 sm:py-7 text-3xl sm:text-4xl font-black uppercase tracking-wider shadow-lg"
               style={{ animation: "big-pulse 1.4s ease-in-out infinite" }}
             >
               PRÓXIMO ➔
@@ -186,7 +186,7 @@ function Kiosk() {
           title="Painel Administrativo"
         />
 
-        <footer className="py-4 text-center text-xs font-bold text-black/40">
+        <footer className="py-2 text-center text-xs font-bold text-black/40">
           Conexão VIP · Todos os direitos reservados
         </footer>
       </div>
@@ -197,7 +197,7 @@ function Kiosk() {
     <div className="min-h-screen w-full bg-white text-black flex flex-col justify-between">
       <TopBar />
 
-      <main className="mx-auto flex w-full max-w-2xl flex-col items-center px-4 pb-8 pt-2">
+      <main className="mx-auto flex w-full max-w-4xl md:max-w-5xl flex-col items-center px-4 pt-1 pb-4">
         <SlotBoard
           spinning={spinning}
           finalIcons={finalIcons}
@@ -216,7 +216,7 @@ function Kiosk() {
         title="Painel Administrativo"
       />
 
-      <footer className="py-4 text-center text-xs font-bold text-black/40">
+      <footer className="py-2 text-center text-xs font-bold text-black/40">
         Conexão VIP · Todos os direitos reservados
       </footer>
     </div>
@@ -225,7 +225,7 @@ function Kiosk() {
 
 function TopBar() {
   return (
-    <div className="flex justify-center items-center py-4">
+    <div className="flex justify-center items-center pt-2 pb-0">
       <img src="/logo-cnx.png" alt="CNX Logo" className="h-16 sm:h-20 max-w-xs object-contain" />
     </div>
   );
@@ -247,24 +247,24 @@ function SlotBoard({
   onSpin: () => void;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border-[6px] border-black bg-yellow p-4 sm:p-6 shadow-[8px_8px_0_0_#000] w-full">
+    <div className="relative overflow-hidden rounded-[2.5rem] border-[8px] border-black bg-yellow p-6 sm:p-8 md:p-10 shadow-[12px_12px_0_0_#000] w-full">
       <div className="relative">
         {/* Title bar */}
-        <div className="relative mx-2 mt-2 text-center pb-2">
-          <div className="text-xs font-black uppercase tracking-[0.3em] text-black">
+        <div className="relative mx-2 mt-1 text-center pb-2">
+          <div className="text-xs sm:text-sm font-black uppercase tracking-[0.35em] text-black">
             Conexão VIP
           </div>
-          <div className="font-display text-3xl sm:text-4xl font-black uppercase tracking-tight text-black mt-0.5">
+          <div className="font-display text-4xl sm:text-5xl md:text-6xl font-black uppercase tracking-tight text-black mt-1">
             Sorteador de Brindes
           </div>
-          <div className="mt-1 text-xs font-black uppercase tracking-wider text-black/70">
+          <div className="mt-1 text-xs sm:text-base font-black uppercase tracking-wider text-black/80">
             Alinhe 3 símbolos iguais para ganhar um brinde!
           </div>
         </div>
 
         {/* Reels display */}
-        <div className="mx-2 mt-4">
-          <div className="grid grid-cols-3 gap-3">
+        <div className="mx-1 mt-6 sm:mt-8">
+          <div className="grid grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             <SlotReel spinning={spinning} finalIcon={finalIcons[0]} delay={0} onSettle={onReelSettle} />
             <SlotReel spinning={spinning} finalIcon={finalIcons[1]} delay={700} onSettle={onReelSettle} />
             <SlotReel spinning={spinning} finalIcon={finalIcons[2]} delay={1400} onSettle={onReelSettle} />
@@ -276,12 +276,12 @@ function SlotBoard({
           type="button"
           onClick={onSpin}
           disabled={!canSpin || isSpinning}
-          className="btn-yellow btn-yellow-hover relative mx-2 mt-6 block w-[calc(100%-1rem)] rounded-2xl bg-white py-7 sm:py-8 text-4xl sm:text-5xl font-black disabled:opacity-60 shadow-lg"
+          className="btn-yellow btn-yellow-hover relative mx-1 mt-6 sm:mt-8 block w-[calc(100%-0.5rem)] rounded-3xl border-4 border-black bg-white py-8 sm:py-10 md:py-12 text-5xl sm:text-6xl md:text-7xl font-black disabled:opacity-60 shadow-2xl"
           style={{ animation: canSpin && !isSpinning ? "big-pulse 1.4s ease-in-out infinite" : undefined }}
         >
           {isSpinning ? (
-            <span className="inline-flex items-center justify-center gap-3">
-              <Loader2 className="h-10 w-10 animate-spin" /> Girando…
+            <span className="inline-flex items-center justify-center gap-4">
+              <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 animate-spin" /> Girando…
             </span>
           ) : (
             <span className="relative inline-block">

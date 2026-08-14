@@ -60,7 +60,7 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
 
   return (
     <div
-      className="reel-window relative overflow-hidden rounded-2xl border-4 border-black bg-white shadow-[inset_0_4px_12px_rgba(0,0,0,0.18)] w-full aspect-square"
+      className="reel-window relative overflow-hidden rounded-3xl border-[6px] border-black bg-white shadow-[inset_0_6px_16px_rgba(0,0,0,0.25)] w-full aspect-square"
     >
       <div
         className="absolute left-0 right-0 flex flex-col items-center"
@@ -70,14 +70,14 @@ export function SlotReel({ spinning, finalIcon, delay, onSettle }: Props) {
         }}
       >
         {displayStrip.map((icon, i) => (
-          <div key={i} className="flex items-center justify-center w-full aspect-square shrink-0 p-4">
-            <SlotIcon name={icon} className="w-full h-full object-contain" />
+          <div key={i} className="flex items-center justify-center w-full aspect-square shrink-0 p-5 sm:p-7 md:p-8">
+            <SlotIcon name={icon} className="w-full h-full object-contain filter drop-shadow-sm" />
           </div>
         ))}
       </div>
       {/* 3D cylindrical shadow overlays */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1/6 bg-gradient-to-b from-black/25 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/6 bg-gradient-to-t from-black/25 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1/5 bg-gradient-to-b from-black/30 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/5 bg-gradient-to-t from-black/30 to-transparent" />
     </div>
   );
 }
