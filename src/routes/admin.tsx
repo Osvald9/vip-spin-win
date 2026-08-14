@@ -26,6 +26,7 @@ import {
   adminUpsertPrize,
   adminDeletePrize,
   adminSyncAllPrizes,
+  adminSyncAllParticipants,
   adminUploadIcon,
   adminDeleteParticipant,
 } from "@/lib/slot.functions";
@@ -62,7 +63,8 @@ interface Participant {
   id: string;
   full_name: string;
   whatsapp: string;
-  city: string;
+  cpf?: string;
+  city?: string;
   is_client?: boolean;
   prize_name: string | null;
   redemption_code: string | null;
@@ -197,11 +199,13 @@ function Admin() {
 }
 
 const LOCAL_STORAGE_PRIZES_KEY = "vip_custom_prizes_v4";
+const LOCAL_STORAGE_PARTICIPANTS_KEY = "vip_participants_master_v1";
 
 function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }) {
   const listAll = useServerFn(adminListAll);
   const upsert = useServerFn(adminUpsertPrize);
   const syncAll = useServerFn(adminSyncAllPrizes);
+  const syncParticipants = useServerFn(adminSyncAllParticipants);
   const del = useServerFn(adminDeletePrize);
   const delParticipant = useServerFn(adminDeleteParticipant);
   
@@ -214,7 +218,15 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
     }
     return [];
   });
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem(LOCAL_STORAGE_PARTICIPANTS_KEY);
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return [];
+  });
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"prizes" | "participants">("prizes");
 
@@ -224,15 +236,26 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
   async function refresh(silent = false) {
     if (!silent) setLoading(true);
     try {
-      // 1. Verifica se há cache local persistido
+      // 1. Sincroniza prêmios locais persistidos
       const cached = typeof window !== "undefined" ? localStorage.getItem(LOCAL_STORAGE_PRIZES_KEY) : null;
       if (cached) {
         try {
           const localPrizes = JSON.parse(cached);
           if (Array.isArray(localPrizes) && localPrizes.length > 0) {
             setPrizes(localPrizes);
-            // Sincroniza o worker em segundo plano com a versão local
             await syncAll({ data: { pin, prizes: localPrizes } }).catch(() => {});
+          }
+        } catch {}
+      }
+
+      // 2. Sincroniza participantes locais persistidos
+      const cachedParts = typeof window !== "undefined" ? localStorage.getItem(LOCAL_STORAGE_PARTICIPANTS_KEY) : null;
+      if (cachedParts) {
+        try {
+          const localParts = JSON.parse(cachedParts);
+          if (Array.isArray(localParts) && localParts.length > 0) {
+            await syncParticipants({ data: { pin, participants: localParts } }).catch(() => {});
+            setParticipants(localParts);
           }
         } catch {}
       }
@@ -243,7 +266,6 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(res.prizes));
         setPrizes(res.prizes as Prize[]);
       } else if (cached && res.prizes) {
-        // Mescla quantidades consumidas no servidor mantendo as edições locais
         const localPrizes: Prize[] = JSON.parse(cached);
         const merged = localPrizes.map((lp) => {
           const sp: any = res.prizes.find((p: any) => p.id === lp.id);
@@ -263,7 +285,22 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
         setPrizes(res.prizes as Prize[]);
       }
 
-      setParticipants(res.participants as Participant[]);
+      // Mescla participantes do servidor com participantes locais
+      const localList: Participant[] = cachedParts ? JSON.parse(cachedParts) : [];
+      const pMap = new Map<string, Participant>();
+      for (const p of localList) {
+        if (p.id) pMap.set(p.id, p);
+      }
+      for (const p of (res.participants as Participant[] || [])) {
+        if (p.id) pMap.set(p.id, p);
+      }
+      const mergedParts = Array.from(pMap.values()).sort(
+        (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
+      );
+      setParticipants(mergedParts);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(LOCAL_STORAGE_PARTICIPANTS_KEY, JSON.stringify(mergedParts));
+      }
     } catch (e: any) {
       console.error("Erro ao carregar dados:", e);
     } finally {
@@ -510,6 +547,11 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
     try {
       for (const id of ids) {
         await delParticipant({ data: { pin, id } });
+      }
+      const remaining = participants.filter((p) => !ids.includes(p.id));
+      setParticipants(remaining);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(LOCAL_STORAGE_PARTICIPANTS_KEY, JSON.stringify(remaining));
       }
     } catch (e: any) {
       alert("Erro ao excluir participante(s): " + e.message);
@@ -1253,9 +1295,10 @@ function ParticipantsTab({
         const query = search.toLowerCase();
         const matchName = p.full_name?.toLowerCase().includes(query);
         const matchWhats = p.whatsapp?.includes(query);
+        const matchCpf = p.cpf?.includes(query);
         const matchPrize = p.prize_name?.toLowerCase().includes(query);
         const matchCode = p.redemption_code?.toLowerCase().includes(query);
-        if (!matchName && !matchWhats && !matchPrize && !matchCode) return false;
+        if (!matchName && !matchWhats && !matchCpf && !matchPrize && !matchCode) return false;
       }
       return true;
     });
@@ -1282,12 +1325,11 @@ function ParticipantsTab({
   };
 
   function exportCSV() {
-    const header = ["Nome", "WhatsApp", "Cidade", "Cliente VIP", "Ganhou", "Prêmio", "Código", "Data"];
+    const header = ["Nome", "WhatsApp", "CPF", "Ganhou", "Prêmio", "Código", "Data / Hora"];
     const rows = filtered.map((p) => [
       p.full_name,
       p.whatsapp,
-      p.city,
-      p.is_client ? "Sim" : "Não",
+      p.cpf || "",
       p.won ? "Sim" : "Não",
       p.prize_name ?? "",
       p.redemption_code ?? "",
@@ -1356,7 +1398,7 @@ function ParticipantsTab({
         <div className="flex items-center gap-2">
           <input
             type="text"
-            placeholder="Buscar nome, fone, prêmio..."
+            placeholder="Buscar nome, CPF, fone, prêmio..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="rounded-lg border border-border bg-input px-3 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none w-48 sm:w-64"
@@ -1407,8 +1449,7 @@ function ParticipantsTab({
               </th>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">WhatsApp</th>
-              <th className="px-4 py-3">Cidade</th>
-              <th className="px-4 py-3">Status VIP</th>
+              <th className="px-4 py-3">CPF</th>
               <th className="px-4 py-3">Prêmio</th>
               <th className="px-4 py-3">Código</th>
               <th className="px-4 py-3">Data / Hora</th>
@@ -1427,18 +1468,7 @@ function ParticipantsTab({
                 </td>
                 <td className="px-4 py-3 font-medium">{p.full_name}</td>
                 <td className="px-4 py-3 font-mono text-xs">{p.whatsapp}</td>
-                <td className="px-4 py-3">{p.city}</td>
-                <td className="px-4 py-3">
-                  {p.is_client ? (
-                    <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1">
-                      ★ Cliente VIP
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                      Não Cliente
-                    </span>
-                  )}
-                </td>
+                <td className="px-4 py-3 font-mono text-xs">{p.cpf || "—"}</td>
                 <td className="px-4 py-3">
                   {p.won ? (
                     <span className="rounded-full bg-primary/20 px-2.5 py-1 text-xs font-bold text-primary inline-flex items-center gap-1">

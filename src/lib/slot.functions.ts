@@ -1,6 +1,36 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+function isValidCPF(cpf: string): boolean {
+  const clean = cpf.replace(/\D/g, "");
+  if (clean.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(clean)) return false;
+
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(clean.charAt(i), 10) * (10 - i);
+  }
+  let rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(clean.charAt(9), 10)) return false;
+
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(clean.charAt(i), 10) * (11 - i);
+  }
+  rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(clean.charAt(10), 10)) return false;
+
+  return true;
+}
+
+function formatCPF(cpf: string): string {
+  const clean = cpf.replace(/\D/g, "");
+  if (clean.length !== 11) return cpf;
+  return clean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+}
+
 const registerSchema = z.object({
   full_name: z.string().trim().min(2).max(120),
   whatsapp: z
@@ -9,8 +39,12 @@ const registerSchema = z.object({
     .min(8)
     .max(30)
     .transform((v) => v.replace(/\D/g, "")),
-  city: z.string().trim().min(2).max(80),
-  is_client: z.boolean().default(false),
+  cpf: z
+    .string()
+    .trim()
+    .min(11)
+    .max(20)
+    .transform((v) => v.replace(/\D/g, "")),
   accepted_terms: z.literal(true),
 });
 
@@ -294,59 +328,72 @@ async function getLocalDatabase() {
 export const registerParticipant = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => registerSchema.parse(data))
   .handler(async ({ data }) => {
-    if (shouldUseSupabase()) {
-      try {
-        const supabase = await loadAdmin();
-        const { data: existing } = await supabase
-          .from("participants")
-          .select("id")
-          .eq("whatsapp", data.whatsapp)
-          .maybeSingle();
-        if (existing) {
-          return { ok: false as const, error: "Este WhatsApp já participou desta ativação." };
-        }
-        const { data: created, error } = await supabase
-          .from("participants")
-          .insert({
-            full_name: data.full_name,
-            whatsapp: data.whatsapp,
-            city: data.city,
-            is_client: !!data.is_client,
-            accepted_terms: true,
-          })
-          .select()
-          .single();
-        if (!error && created) {
-          return { ok: true as const, participantId: created.id };
-        }
-      } catch (e) {
-        console.warn("[Supabase] Fallback to local DB on register:", e);
-      }
-    } else {
-      const db = await getLocalDatabase();
-      const participants = await db.readParticipants();
-      const existing = participants.find((p: any) => p.whatsapp === data.whatsapp);
-      if (existing) {
-        return { ok: false as const, error: "Este WhatsApp já participou desta ativação." };
-      }
-      const crypto = await import("crypto");
-      const newPart = {
-        id: crypto.randomUUID(),
-        full_name: data.full_name,
-        whatsapp: data.whatsapp,
-        city: data.city,
-        is_client: !!data.is_client,
-        accepted_terms: true,
-        prize_id: null,
-        prize_name: null,
-        redemption_code: null,
-        won: false,
-        created_at: new Date().toISOString(),
-      };
-      participants.push(newPart);
-      await db.writeParticipants(participants);
-      return { ok: true as const, participantId: newPart.id };
+    if (!isValidCPF(data.cpf)) {
+      return { ok: false as const, error: "Por favor, digite um CPF válido." };
     }
+
+    const todayKey = getTodayKey();
+    const db = await getLocalDatabase();
+    const participants = await db.readParticipants();
+    
+    // Regra: Apenas 1 participação por CPF por dia (ciclo até 02h)
+    const alreadyPlayedToday = participants.find((p: any) => {
+      const pCpf = (p.cpf || "").replace(/\D/g, "");
+      return pCpf === data.cpf && isCreatedToday(p.created_at, todayKey);
+    });
+
+    if (alreadyPlayedToday) {
+      return {
+        ok: false as const,
+        error: "Este CPF já participou do caça-níquel hoje! É permitido apenas 1 giro por CPF a cada dia do evento.",
+      };
+    }
+
+    const crypto = await import("crypto");
+    const formattedCpf = formatCPF(data.cpf);
+    const newPart = {
+      id: crypto.randomUUID(),
+      full_name: data.full_name,
+      whatsapp: data.whatsapp,
+      cpf: formattedCpf,
+      accepted_terms: true,
+      prize_id: null,
+      prize_name: null,
+      redemption_code: null,
+      won: false,
+      created_at: new Date().toISOString(),
+    };
+    
+    participants.unshift(newPart);
+    await db.writeParticipants(participants);
+    return { ok: true as const, participantId: newPart.id, participant: newPart };
+  });
+
+export const adminSyncAllParticipants = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    adminAuth
+      .extend({
+        participants: z.array(z.any()),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    checkPin(data.pin);
+    const db = await getLocalDatabase();
+    const current = await db.readParticipants();
+    
+    const map = new Map();
+    for (const p of current) {
+      if (p.id) map.set(p.id, p);
+    }
+    for (const p of data.participants) {
+      if (p.id) map.set(p.id, p);
+    }
+    const merged = Array.from(map.values()).sort(
+      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
+    );
+    await db.writeParticipants(merged);
+    return { ok: true, participants: merged };
   });
 
 export const listActivePrizes = createServerFn({ method: "GET" }).handler(async () => {

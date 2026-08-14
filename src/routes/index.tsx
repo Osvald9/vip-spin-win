@@ -283,6 +283,27 @@ function TopBar() {
   );
 }
 
+function maskCPF(value: string) {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function maskPhone(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
 function RegistrationForm({
   onDone,
   disabled,
@@ -295,7 +316,7 @@ function RegistrationForm({
   const register = useServerFn(registerParticipant);
   const [fullName, setName] = useState("");
   const [whatsapp, setWhats] = useState("");
-  const [city, setCity] = useState("");
+  const [cpf, setCpf] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -306,7 +327,8 @@ function RegistrationForm({
     if (fullName.trim().length < 2) return setError("Informe seu nome completo.");
     if (whatsapp.replace(/\D/g, "").length < 10)
       return setError("Informe um WhatsApp válido com DDD.");
-    if (city.trim().length < 2) return setError("Informe sua cidade.");
+    if (cpf.replace(/\D/g, "").length !== 11)
+      return setError("Informe um CPF válido com 11 dígitos.");
     if (!accepted) return setError("Aceite os termos para continuar.");
     setLoading(true);
     try {
@@ -314,12 +336,24 @@ function RegistrationForm({
         data: {
           full_name: fullName,
           whatsapp,
-          city,
+          cpf,
           accepted_terms: true as const,
         },
       });
-      if (!res.ok) setError(res.error);
-      else onDone(res.participantId);
+      if (!res.ok) {
+        setError(res.error);
+      } else {
+        // Salva cópia de segurança no localStorage do totem
+        if (typeof window !== "undefined" && res.participant) {
+          try {
+            const cached = localStorage.getItem("vip_participants_master_v1");
+            const list = cached ? JSON.parse(cached) : [];
+            list.unshift(res.participant);
+            localStorage.setItem("vip_participants_master_v1", JSON.stringify(list));
+          } catch {}
+        }
+        onDone(res.participantId);
+      }
     } catch {
       setError("Erro ao cadastrar. Tente novamente.");
     } finally {
@@ -360,21 +394,23 @@ function RegistrationForm({
             type="tel"
             inputMode="tel"
             value={whatsapp}
-            onChange={(e) => setWhats(e.target.value)}
+            onChange={(e) => setWhats(maskPhone(e.target.value))}
             disabled={disabled}
             className="kiosk-input"
             placeholder="(00) 00000-0000"
             autoComplete="off"
           />
         </Field>
-        <Field label="Cidade">
+        <Field label="CPF">
           <input
             type="text"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
+            inputMode="numeric"
+            value={cpf}
+            onChange={(e) => setCpf(maskCPF(e.target.value))}
             disabled={disabled}
+            maxLength={14}
             className="kiosk-input"
-            placeholder="Sua cidade"
+            placeholder="000.000.000-00"
             autoComplete="off"
           />
         </Field>
