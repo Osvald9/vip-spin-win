@@ -140,16 +140,16 @@ function Kiosk() {
 
   if (stage === "qr") {
     return (
-      <div className="min-h-screen w-full bg-white text-black flex flex-col items-center justify-center p-3 sm:p-6">
+      <div className="min-h-screen w-full bg-white text-black flex flex-col items-center justify-center p-4 sm:p-8">
         <main className="w-full max-w-3xl flex flex-col items-center text-center">
           {/* Logo */}
-          <div className="mb-2">
-            <img src="/logo-cnx.png" alt="CNX Logo" className="h-14 sm:h-20 max-w-xs object-contain drop-shadow-sm" />
+          <div className="mb-4 sm:mb-5">
+            <img src="/logo-cnx.png" alt="CNX Logo" className="h-16 sm:h-22 max-w-xs object-contain drop-shadow-sm" />
           </div>
 
           {/* Frase Chamativa em Destaque */}
           <div
-            className="mb-3.5 inline-flex items-center justify-center gap-2 rounded-2xl bg-yellow border-[4px] border-black px-5 py-2.5 shadow-[5px_5px_0_0_#000] w-full max-w-2xl"
+            className="mb-5 sm:mb-6 inline-flex items-center justify-center gap-2.5 rounded-2xl bg-yellow border-[4px] border-black px-6 py-3 shadow-[6px_6px_0_0_#000] w-full max-w-2xl"
             style={{ animation: "big-pulse 1.4s ease-in-out infinite" }}
           >
             <Gift className="h-6 w-6 sm:h-8 sm:w-8 text-black shrink-0 animate-bounce" />
@@ -159,21 +159,21 @@ function Kiosk() {
             <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-black shrink-0" />
           </div>
 
-          <div className="rounded-[2.5rem] border-[8px] border-black bg-white p-5 sm:p-8 w-full shadow-[12px_12px_0_0_#000] flex flex-col items-center">
-            <div className="inline-block rounded-full bg-yellow border-2 border-black px-5 py-1.5 text-xs sm:text-base font-black uppercase tracking-widest text-black mb-2">
+          <div className="rounded-[2.5rem] border-[8px] border-black bg-white p-6 sm:p-9 w-full shadow-[12px_12px_0_0_#000] flex flex-col items-center">
+            <div className="inline-block rounded-full bg-yellow border-2 border-black px-5 py-1.5 text-xs sm:text-base font-black uppercase tracking-widest text-black mb-3">
               Ativação Stand Conexão VIP
             </div>
 
-            <h1 className="text-2xl sm:text-4xl font-black text-black leading-tight">
+            <h1 className="text-2xl sm:text-4xl font-black text-black leading-tight mt-1">
               Escaneie o QR Code
             </h1>
 
-            <p className="text-sm sm:text-lg font-bold text-black/75 mt-0.5">
+            <p className="text-sm sm:text-lg font-bold text-black/75 mt-1.5 mb-2">
               Aponte a câmera do seu celular para participar
             </p>
 
             {/* QR Code Gigante */}
-            <div className="mt-4 w-full flex justify-center">
+            <div className="mt-5 w-full flex justify-center">
               <div className="relative overflow-hidden rounded-3xl border-[6px] border-black bg-white p-4 sm:p-6 shadow-xl w-full max-w-[560px]">
                 <img
                   src="/qr-code.jpeg"
@@ -186,7 +186,7 @@ function Kiosk() {
             <button
               type="button"
               onClick={() => setStage("slot")}
-              className="btn-yellow btn-yellow-hover mt-6 w-full max-w-[560px] rounded-2xl py-6 sm:py-7 text-3xl sm:text-4xl font-black uppercase tracking-wider shadow-xl"
+              className="btn-yellow btn-yellow-hover mt-7 sm:mt-8 w-full max-w-[560px] rounded-2xl py-6 sm:py-7 text-3xl sm:text-4xl font-black uppercase tracking-wider shadow-xl"
               style={{ animation: "big-pulse 1.4s ease-in-out infinite" }}
             >
               PRÓXIMO ➔
@@ -202,7 +202,7 @@ function Kiosk() {
           title="Painel Administrativo"
         />
 
-        <footer className="py-3 text-center text-xs font-bold text-black/40">
+        <footer className="py-4 text-center text-xs font-bold text-black/40">
           Conexão VIP · Todos os direitos reservados
         </footer>
       </div>
@@ -210,10 +210,10 @@ function Kiosk() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-white text-black flex flex-col items-center justify-center p-3 sm:p-6">
+    <div className="min-h-screen w-full bg-white text-black flex flex-col items-center justify-center p-4 sm:p-8">
       <main className="w-full max-w-5xl flex flex-col items-center">
-        {/* Logo diretamente colada no topo do caça-níquel */}
-        <div className="mb-3">
+        {/* Logo acima do caça-níquel */}
+        <div className="mb-5 sm:mb-6">
           <img src="/logo-cnx.png" alt="CNX Logo" className="h-16 sm:h-22 max-w-xs object-contain drop-shadow-sm" />
         </div>
 
@@ -235,7 +235,7 @@ function Kiosk() {
         title="Painel Administrativo"
       />
 
-      <footer className="py-3 text-center text-xs font-bold text-black/40">
+      <footer className="py-4 text-center text-xs font-bold text-black/40">
         Conexão VIP · Todos os direitos reservados
       </footer>
     </div>
@@ -244,7 +244,7 @@ function Kiosk() {
 
 function TopBar() {
   return (
-    <div className="flex justify-center items-center py-1">
+    <div className="flex justify-center items-center py-2">
       <img src="/logo-cnx.png" alt="CNX Logo" className="h-16 sm:h-20 max-w-xs object-contain" />
     </div>
   );
@@ -330,7 +330,7 @@ function ResultScreen({
     <div className="min-h-screen w-full bg-white text-black flex flex-col items-center justify-center p-4 sm:p-8">
       <main className="mx-auto flex w-full max-w-2xl flex-col items-center text-center">
         {/* Logo diretamente colada no topo */}
-        <div className="mb-4">
+        <div className="mb-5 sm:mb-6">
           <img src="/logo-cnx.png" alt="CNX Logo" className="h-16 sm:h-22 max-w-xs object-contain drop-shadow-sm" />
         </div>
 
