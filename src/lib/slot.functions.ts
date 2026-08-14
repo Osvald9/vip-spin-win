@@ -441,13 +441,40 @@ export const listActivePrizes = createServerFn({ method: "GET" }).handler(async 
 });
 
 export const spinSlot = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => z.object({ participantId: z.string().min(1) }).parse(data))
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        participantId: z.string().optional().nullable(),
+      })
+      .optional()
+      .default({})
+      .parse(data),
+  )
   .handler(async ({ data }) => {
     const db = await getLocalDatabase();
     const participants = await db.readParticipants();
-    const participant = participants.find((p: any) => p.id === data.participantId);
-    if (!participant) return { ok: false as const, error: "Participante não encontrado" };
-    if (participant.prize_id || participant.won) {
+    const crypto = await import("crypto");
+    
+    let participant: any = null;
+    if (data?.participantId) {
+      participant = participants.find((p: any) => p.id === data.participantId);
+    }
+
+    if (!participant) {
+      participant = {
+        id: crypto.randomUUID(),
+        full_name: `Participante #${participants.length + 1}`,
+        whatsapp: "—",
+        cpf: "—",
+        accepted_terms: true,
+        prize_id: null,
+        prize_name: null,
+        redemption_code: null,
+        won: false,
+        created_at: new Date().toISOString(),
+      };
+      participants.unshift(participant);
+    } else if (participant.prize_id || participant.won) {
       return { ok: false as const, error: "Você já jogou nesta ativação." };
     }
 
