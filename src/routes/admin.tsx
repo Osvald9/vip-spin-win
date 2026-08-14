@@ -25,6 +25,7 @@ import {
   adminListAll,
   adminUpsertPrize,
   adminDeletePrize,
+  adminSyncAllPrizes,
   adminUploadIcon,
   adminDeleteParticipant,
 } from "@/lib/slot.functions";
@@ -195,12 +196,24 @@ function Admin() {
   );
 }
 
+const LOCAL_STORAGE_PRIZES_KEY = "vip_custom_prizes_v3";
+
 function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }) {
   const listAll = useServerFn(adminListAll);
   const upsert = useServerFn(adminUpsertPrize);
+  const syncAll = useServerFn(adminSyncAllPrizes);
   const del = useServerFn(adminDeletePrize);
   const delParticipant = useServerFn(adminDeleteParticipant);
-  const [prizes, setPrizes] = useState<Prize[]>([]);
+  
+  const [prizes, setPrizes] = useState<Prize[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem(LOCAL_STORAGE_PRIZES_KEY);
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return [];
+  });
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"prizes" | "participants">("prizes");
@@ -211,11 +224,48 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
   async function refresh(silent = false) {
     if (!silent) setLoading(true);
     try {
+      // 1. Verifica se há cache local persistido
+      const cached = typeof window !== "undefined" ? localStorage.getItem(LOCAL_STORAGE_PRIZES_KEY) : null;
+      if (cached) {
+        try {
+          const localPrizes = JSON.parse(cached);
+          if (Array.isArray(localPrizes) && localPrizes.length > 0) {
+            setPrizes(localPrizes);
+            // Sincroniza o worker em segundo plano com a versão local
+            await syncAll({ data: { pin, prizes: localPrizes } }).catch(() => {});
+          }
+        } catch {}
+      }
+
       const res = await listAll({ data: { pin } });
-      setPrizes(res.prizes as Prize[]);
+      
+      if (!cached && res.prizes && res.prizes.length > 0) {
+        localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(res.prizes));
+        setPrizes(res.prizes as Prize[]);
+      } else if (cached && res.prizes) {
+        // Mescla quantidades consumidas no servidor mantendo as edições locais
+        const localPrizes: Prize[] = JSON.parse(cached);
+        const merged = localPrizes.map((lp) => {
+          const sp: any = res.prizes.find((p: any) => p.id === lp.id);
+          return sp
+            ? {
+                ...lp,
+                won_today: sp.won_today,
+                won_by_date: sp.won_by_date,
+                remaining_quantity: sp.remaining_quantity,
+                effective_limit_today: sp.effective_limit_today,
+              }
+            : lp;
+        });
+        setPrizes(merged);
+        localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(merged));
+      } else {
+        setPrizes(res.prizes as Prize[]);
+      }
+
       setParticipants(res.participants as Participant[]);
     } catch (e: any) {
-      alert("Erro ao carregar dados: " + e.message);
+      console.error("Erro ao carregar dados:", e);
     } finally {
       if (!silent) setLoading(false);
     }
@@ -228,30 +278,208 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
 
   async function save(p: Partial<Prize> & { id?: string }) {
     try {
-      await upsert({
-        data: {
-          pin,
-          id: p.id,
-          name: p.name ?? "",
-          icon: p.icon ?? "gift",
-          total_quantity: p.total_quantity ?? 0,
-          remaining_quantity: p.remaining_quantity ?? 0,
-          daily_limit: p.daily_limit ?? 0,
-          date_quotas: p.date_quotas ?? {},
-          weight: p.weight ?? 10,
-          active: p.active ?? true,
-        },
-      });
-      await refresh(true);
+      const nextPrizes = [...prizes];
+      const targetId = p.id && p.id.trim() ? p.id.trim() : (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "prize-" + Date.now());
+      const idx = nextPrizes.findIndex((x) => x.id === targetId);
+      
+      const updatedItem: Prize = {
+        id: targetId,
+        name: p.name ?? "Novo Prêmio",
+        icon: p.icon ?? "gift",
+        total_quantity: p.total_quantity ?? 50,
+        remaining_quantity: p.remaining_quantity ?? (p.total_quantity ?? 50),
+        daily_limit: p.daily_limit ?? 0,
+        date_quotas: p.date_quotas ?? {},
+        weight: p.weight ?? 10,
+        active: p.active ?? true,
+        created_at: p.created_at ?? new Date().toISOString(),
+      };
+
+      if (idx !== -1) {
+        nextPrizes[idx] = updatedItem;
+      } else {
+        nextPrizes.push(updatedItem);
+      }
+
+      // Persistência Imediata Local + Sync com o Worker
+      setPrizes(nextPrizes);
+      localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(nextPrizes));
+
+      await syncAll({ data: { pin, prizes: nextPrizes } });
+      await upsert({ data: { pin, ...updatedItem } });
+      alert(`✅ Prêmio "${updatedItem.name}" salvo com sucesso!`);
     } catch (e: any) {
       alert("Erro ao salvar prêmio: " + e.message);
     }
   }
 
   async function remove(id: string) {
-    if (!confirm("Excluir este prêmio?")) return;
-    await del({ data: { pin, id } });
-    await refresh(true);
+    if (!confirm("Tem certeza que deseja excluir este prêmio?")) return;
+    try {
+      const filtered = prizes.filter((p) => p.id !== id);
+      setPrizes(filtered);
+      localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(filtered));
+
+      await del({ data: { pin, id } });
+      await syncAll({ data: { pin, prizes: filtered } });
+      alert("✅ Prêmio excluído com sucesso!");
+    } catch (e: any) {
+      alert("Erro ao excluir prêmio: " + e.message);
+    }
+  }
+
+  async function resetToEventDefaults() {
+    if (
+      !confirm(
+        "Deseja restaurar a configuração padrão do evento de 13 a 16 de Agosto (Copos 520/dia, Chaveiros 75/dia, Canetas 30/dia, Lixeiras 25/24, Bonés 20/dia, Mensalidade 2/dia)? Isso substituirá as edições atuais.",
+      )
+    )
+      return;
+    
+    const defaultPrizes: Prize[] = [
+      {
+        id: "11111111-1316-4000-8000-000000000001",
+        name: "Copo (Térmico / Amarelo)",
+        icon: "zap",
+        total_quantity: 2080,
+        remaining_quantity: 2080,
+        daily_limit: 520,
+        date_quotas: {
+          "2026-08-13": 520,
+          "2026-08-14": 520,
+          "2026-08-15": 520,
+          "2026-08-16": 520,
+        },
+        weight: 76,
+        active: true,
+        created_at: "2026-08-11T18:28:00.000Z",
+      },
+      {
+        id: "22222222-1316-4000-8000-000000000002",
+        name: "Chaveiro",
+        icon: "heart",
+        total_quantity: 300,
+        remaining_quantity: 300,
+        daily_limit: 75,
+        date_quotas: {
+          "2026-08-13": 75,
+          "2026-08-14": 75,
+          "2026-08-15": 75,
+          "2026-08-16": 75,
+        },
+        weight: 11,
+        active: true,
+        created_at: "2026-08-11T18:28:00.000Z",
+      },
+      {
+        id: "33333333-1316-4000-8000-000000000003",
+        name: "Caneta",
+        icon: "robot",
+        total_quantity: 120,
+        remaining_quantity: 120,
+        daily_limit: 30,
+        date_quotas: {
+          "2026-08-13": 30,
+          "2026-08-14": 30,
+          "2026-08-15": 30,
+          "2026-08-16": 30,
+        },
+        weight: 5,
+        active: true,
+        created_at: "2026-08-11T18:28:00.000Z",
+      },
+      {
+        id: "44444444-1316-4000-8000-000000000004",
+        name: "Lixeira de Carro",
+        icon: "wifi",
+        total_quantity: 97,
+        remaining_quantity: 97,
+        daily_limit: 25,
+        date_quotas: {
+          "2026-08-13": 25,
+          "2026-08-14": 24,
+          "2026-08-15": 24,
+          "2026-08-16": 24,
+        },
+        weight: 4,
+        active: true,
+        created_at: "2026-08-11T18:28:00.000Z",
+      },
+      {
+        id: "66666666-1316-4000-8000-000000000006",
+        name: "Boné",
+        icon: "camera",
+        total_quantity: 80,
+        remaining_quantity: 80,
+        daily_limit: 20,
+        date_quotas: {
+          "2026-08-13": 20,
+          "2026-08-14": 20,
+          "2026-08-15": 20,
+          "2026-08-16": 20,
+        },
+        weight: 3,
+        active: true,
+        created_at: "2026-08-13T13:45:00.000Z",
+      },
+      {
+        id: "77777777-1316-4000-8000-000000000007",
+        name: "1 Mês Grátis / 50% OFF Mensalidades",
+        icon: "house",
+        total_quantity: 8,
+        remaining_quantity: 8,
+        daily_limit: 2,
+        date_quotas: {
+          "2026-08-13": 2,
+          "2026-08-14": 2,
+          "2026-08-15": 2,
+          "2026-08-16": 2,
+        },
+        weight: 1,
+        active: true,
+        created_at: "2026-08-13T13:45:00.000Z",
+      },
+    ];
+
+    setPrizes(defaultPrizes);
+    localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(defaultPrizes));
+    await syncAll({ data: { pin, prizes: defaultPrizes } });
+    alert("✅ Configuração padrão do evento restaurada!");
+  }
+
+  function exportBackupJSON() {
+    const data = {
+      prizes,
+      participants,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `backup-caca-niquel-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importBackupJSON(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        if (parsed.prizes && Array.isArray(parsed.prizes)) {
+          setPrizes(parsed.prizes);
+          localStorage.setItem(LOCAL_STORAGE_PRIZES_KEY, JSON.stringify(parsed.prizes));
+          await syncAll({ data: { pin, prizes: parsed.prizes } });
+          alert("✅ Backup de prêmios restaurado com sucesso!");
+        }
+      } catch (err: any) {
+        alert("Erro ao importar backup: " + err.message);
+      }
+    };
+    reader.readAsText(file);
   }
 
   async function deleteSelectedParticipants(ids: string[]) {
@@ -404,7 +632,16 @@ function AdminDashboard({ pin, onLogout }: { pin: string; onLogout: () => void }
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : tab === "prizes" ? (
-          <PrizesTab pin={pin} prizes={prizes} onSave={save} onDelete={remove} todayKey={todayKey} />
+          <PrizesTab
+            pin={pin}
+            prizes={prizes}
+            onSave={save}
+            onDelete={remove}
+            onResetDefaults={resetToEventDefaults}
+            onExportBackup={exportBackupJSON}
+            onImportBackup={importBackupJSON}
+            todayKey={todayKey}
+          />
         ) : (
           <ParticipantsTab
             participants={participants}
@@ -428,12 +665,18 @@ function PrizesTab({
   prizes,
   onSave,
   onDelete,
+  onResetDefaults,
+  onExportBackup,
+  onImportBackup,
   todayKey,
 }: {
   pin: string;
   prizes: Prize[];
   onSave: (p: Partial<Prize>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onResetDefaults: () => Promise<void>;
+  onExportBackup: () => void;
+  onImportBackup: (e: React.ChangeEvent<HTMLInputElement>) => void;
   todayKey: string;
 }) {
   const [drafts, setDrafts] = useState<Record<string, Prize>>(() =>
@@ -441,37 +684,7 @@ function PrizesTab({
   );
 
   useEffect(() => {
-    setDrafts((prev) => {
-      const next = { ...prev };
-      prizes.forEach((p) => {
-        const existingDraft = prev[p.id];
-        if (!existingDraft) {
-          next[p.id] = p;
-        } else {
-          const isEdited =
-            existingDraft.name !== p.name ||
-            existingDraft.total_quantity !== p.total_quantity ||
-            existingDraft.daily_limit !== p.daily_limit ||
-            JSON.stringify(existingDraft.date_quotas) !== JSON.stringify(p.date_quotas) ||
-            existingDraft.weight !== p.weight ||
-            existingDraft.active !== p.active;
-
-          if (!isEdited) {
-            next[p.id] = p;
-          } else {
-            next[p.id] = {
-              ...existingDraft,
-              remaining_quantity: p.remaining_quantity,
-              won_today: p.won_today,
-              daily_remaining: p.daily_remaining,
-              effective_limit_today: p.effective_limit_today,
-              won_by_date: p.won_by_date,
-            };
-          }
-        }
-      });
-      return next;
-    });
+    setDrafts(Object.fromEntries(prizes.map((p) => [p.id, p])));
   }, [prizes]);
 
   const [newPrize, setNewPrize] = useState<Partial<Prize>>({
@@ -487,6 +700,34 @@ function PrizesTab({
 
   return (
     <div className="space-y-6">
+      {/* Barra de Ferramentas de Backup e Reset */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/40 p-4 rounded-2xl border border-border">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={onResetDefaults}
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold hover:bg-muted transition"
+            title="Restaura os brindes e cotas oficiais dos dias 13 a 16"
+          >
+            🔄 Restaurar Padrão do Evento (13 a 16/08)
+          </button>
+          <button
+            type="button"
+            onClick={onExportBackup}
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold hover:bg-muted transition flex items-center gap-1.5"
+          >
+            <Download className="h-3.5 w-3.5 text-primary" /> Baixar Backup JSON
+          </button>
+          <label className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold hover:bg-muted transition cursor-pointer flex items-center gap-1.5">
+            <span>📤 Importar Backup</span>
+            <input type="file" accept=".json" onChange={onImportBackup} className="hidden" />
+          </label>
+        </div>
+        <span className="text-xs text-muted-foreground font-semibold">
+          💡 Todas as alterações ficam salvas de forma permanente.
+        </span>
+      </div>
+
       {/* Box de Informações sobre o Limite Diário e por Data */}
       <div className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-4 text-sm flex items-start gap-3">
         <Gift className="h-5 w-5 text-primary shrink-0 mt-0.5" />
@@ -508,10 +749,11 @@ function PrizesTab({
         <PrizeRow
           pin={pin}
           prize={newPrize as Prize}
+          allPrizes={prizes}
           todayKey={todayKey}
           onChange={(p) => setNewPrize((prev) => ({ ...prev, ...p }))}
           onSave={async () => {
-            if (!newPrize.name) return;
+            if (!newPrize.name || !newPrize.name.trim()) return alert("Informe o nome do prêmio.");
             const chosenIcon =
               newPrize.icon && newPrize.icon !== "gift"
                 ? newPrize.icon
@@ -551,6 +793,7 @@ function PrizesTab({
               <PrizeRow
                 pin={pin}
                 prize={drafts[p.id] ?? p}
+                allPrizes={prizes}
                 todayKey={todayKey}
                 onChange={(x) =>
                   setDrafts((d) => ({
@@ -572,6 +815,7 @@ function PrizesTab({
 function PrizeRow({
   pin,
   prize,
+  allPrizes,
   todayKey,
   onChange,
   onSave,
@@ -580,6 +824,7 @@ function PrizeRow({
 }: {
   pin: string;
   prize: Prize;
+  allPrizes: Prize[];
   todayKey: string;
   onChange: (p: Partial<Prize>) => void;
   onSave: () => void | Promise<void>;
@@ -600,6 +845,12 @@ function PrizeRow({
   const isDailyExhausted = effectiveLimit > 0 && wonToday >= effectiveLimit;
   const isTotalExhausted = prize.remaining_quantity <= 0;
 
+  // Cálculo de Porcentagens
+  const activePrizes = allPrizes.filter((p) => p.active);
+  const totalWeight = activePrizes.reduce((s, p) => s + (p.weight || 0), 0);
+  const winShare = totalWeight > 0 && prize.active ? ((prize.weight / totalWeight) * 100).toFixed(1) : "0";
+  const spinChance = totalWeight > 0 && prize.active ? ((prize.weight / totalWeight) * 60).toFixed(1) : "0";
+
   function addOrUpdateDate(dateKey: string, qty: number) {
     if (!dateKey) return;
     const nextQuotas = { ...dateQuotas, [dateKey]: qty };
@@ -610,12 +861,6 @@ function PrizeRow({
     const nextQuotas = { ...dateQuotas };
     delete nextQuotas[dateKey];
     onChange({ date_quotas: nextQuotas });
-  }
-
-  function getQuickDateKey(daysAhead: number) {
-    const d = new Date();
-    d.setDate(d.getDate() + daysAhead);
-    return getEventDateKey(d);
   }
 
   return (
@@ -661,7 +906,12 @@ function PrizeRow({
           value={prize.daily_limit ?? 0}
           onChange={(v) => onChange({ daily_limit: v })}
         />
-        <NumberField label="%" value={prize.weight} onChange={(v) => onChange({ weight: v })} />
+        <NumberField
+          label="Peso / Chance"
+          helper={prize.active ? `${winShare}% dos ganhadores (${spinChance}% no giro)` : "Inativo"}
+          value={prize.weight}
+          onChange={(v) => onChange({ weight: v })}
+        />
 
         {/* Ativo */}
         <div className="flex items-center justify-start sm:justify-center">

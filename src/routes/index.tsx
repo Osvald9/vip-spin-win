@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import confetti from "canvas-confetti";
 import { Loader2, Trophy, PartyPopper, RotateCcw, Wifi, Coins, Flame, Lock, Gamepad2, Brain, Play } from "lucide-react";
 
-import { registerParticipant, spinSlot, listActivePrizes } from "@/lib/slot.functions";
+import { registerParticipant, spinSlot, listActivePrizes, adminSyncAllPrizes } from "@/lib/slot.functions";
 import { SlotReel } from "@/components/slot/SlotReel";
 import { SlotIcon, ICON_KEYS } from "@/components/slot/SlotIcon";
 import { playSpinTicks, playWin, playLose } from "@/lib/slot-sound";
@@ -55,8 +55,24 @@ function Kiosk() {
 
   const spinFn = useServerFn(spinSlot);
   const prizesFn = useServerFn(listActivePrizes);
+  const syncPrizesFn = useServerFn(adminSyncAllPrizes);
   const registerFn = useServerFn(registerParticipant);
   const [testPool, setTestPool] = useState<Array<{ id: string; name: string; icon: string }>>([]);
+
+  useEffect(() => {
+    // Sincroniza prêmios customizados do localStorage com o backend se existirem
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("vip_custom_prizes_v3");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            syncPrizesFn({ data: { pin: "1234", prizes: parsed } }).catch(() => {});
+          }
+        }
+      } catch {}
+    }
+  }, [syncPrizesFn]);
 
   useEffect(() => {
     if (!TEST_MODE) return;

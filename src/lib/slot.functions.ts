@@ -377,7 +377,7 @@ export const listActivePrizes = createServerFn({ method: "GET" }).handler(async 
 });
 
 export const spinSlot = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => z.object({ participantId: z.string().uuid() }).parse(data))
+  .inputValidator((data: unknown) => z.object({ participantId: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
     const db = await getLocalDatabase();
     const participants = await db.readParticipants();
@@ -444,21 +444,7 @@ export const spinSlot = createServerFn({ method: "POST" })
       }
       await db.writePrizes(prizes);
 
-      const isCup =
-        winner.id === "11111111-1316-4000-8000-000000000001" ||
-        winner.name.toLowerCase().includes("copo");
-
-      const isMonthlyPlan =
-        winner.id === "77777777-1316-4000-8000-000000000007" ||
-        winner.name.toLowerCase().includes("mensalidade") ||
-        winner.name.toLowerCase().includes("mês");
-
-      let deliveredPrize = winner.name;
-      if (isCup) {
-        deliveredPrize = "Copo (Térmico / Amarelo)";
-      } else if (isMonthlyPlan) {
-        deliveredPrize = "1 Mês Grátis / 50% OFF Mensalidades";
-      }
+      const deliveredPrize = winner.name;
 
       const code = generateCode();
       participant.prize_id = winner.id;
@@ -559,14 +545,14 @@ export const adminListAll = createServerFn({ method: "POST" })
   });
 
 const upsertPrizeSchema = adminAuth.extend({
-  id: z.string().uuid().optional(),
+  id: z.string().optional().nullable(),
   name: z.string().min(1).max(120),
-  icon: z.string().min(1).max(40),
+  icon: z.string().min(1).max(255).optional().default("gift"),
   total_quantity: z.number().int().min(0).max(100000),
   remaining_quantity: z.number().int().min(0).max(100000),
   daily_limit: z.number().int().min(0).max(100000).optional().default(0),
   date_quotas: z.record(z.string(), z.number().int().min(0)).optional().default({}),
-  weight: z.number().int().min(1).max(1000),
+  weight: z.number().int().min(1).max(10000),
   active: z.boolean(),
 });
 
@@ -574,57 +560,29 @@ export const adminUpsertPrize = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => upsertPrizeSchema.parse(d))
   .handler(async ({ data }) => {
     checkPin(data.pin);
-    if (shouldUseSupabase()) {
-      try {
-        const supabase = await loadAdmin();
-        const payload = {
-          name: data.name,
-          icon: data.icon,
-          total_quantity: data.total_quantity,
-          remaining_quantity: data.remaining_quantity,
-          daily_limit: data.daily_limit ?? 0,
-          date_quotas: data.date_quotas ?? {},
-          weight: data.weight,
-          active: data.active,
-        };
-        if (data.id) {
-          const { error } = await supabase.from("prizes").update(payload).eq("id", data.id);
-          if (!error) return { ok: true };
-        } else {
-          const crypto = await import("crypto");
-          const insertPayload = { id: crypto.randomUUID(), ...payload };
-          const { error } = await supabase.from("prizes").insert(insertPayload);
-          if (!error) return { ok: true };
-        }
-      } catch (e) {
-        console.warn("[Supabase] Fallback to local DB on adminUpsertPrize:", e);
-      }
-    }
-
     const db = await getLocalDatabase();
     const prizes = await db.readPrizes();
+    const crypto = await import("crypto");
+    const targetId = data.id && data.id.trim() ? data.id.trim() : crypto.randomUUID();
     
-    if (data.id) {
-      const index = prizes.findIndex((p: any) => p.id === data.id);
-      if (index !== -1) {
-        prizes[index] = {
-          ...prizes[index],
-          name: data.name,
-          icon: data.icon,
-          total_quantity: data.total_quantity,
-          remaining_quantity: data.remaining_quantity,
-          daily_limit: data.daily_limit ?? 0,
-          date_quotas: data.date_quotas ?? {},
-          weight: data.weight,
-          active: data.active,
-        };
-      }
-    } else {
-      const crypto = await import("crypto");
-      prizes.push({
-        id: crypto.randomUUID(),
+    const index = prizes.findIndex((p: any) => p.id === targetId);
+    if (index !== -1) {
+      prizes[index] = {
+        ...prizes[index],
         name: data.name,
-        icon: data.icon,
+        icon: data.icon || "gift",
+        total_quantity: data.total_quantity,
+        remaining_quantity: data.remaining_quantity,
+        daily_limit: data.daily_limit ?? 0,
+        date_quotas: data.date_quotas ?? {},
+        weight: data.weight,
+        active: data.active,
+      };
+    } else {
+      prizes.push({
+        id: targetId,
+        name: data.name,
+        icon: data.icon || "gift",
         total_quantity: data.total_quantity,
         remaining_quantity: data.remaining_quantity,
         daily_limit: data.daily_limit ?? 0,
@@ -636,28 +594,55 @@ export const adminUpsertPrize = createServerFn({ method: "POST" })
     }
     
     await db.writePrizes(prizes);
-    return { ok: true };
+    return { ok: true, id: targetId, prizes };
+  });
+
+export const adminSyncAllPrizes = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    adminAuth
+      .extend({
+        prizes: z.array(
+          z.object({
+            id: z.string().optional().nullable(),
+            name: z.string(),
+            icon: z.string().optional().default("gift"),
+            total_quantity: z.number(),
+            remaining_quantity: z.number(),
+            daily_limit: z.number().optional().default(0),
+            date_quotas: z.record(z.string(), z.number()).optional().default({}),
+            weight: z.number(),
+            active: z.boolean(),
+            created_at: z.string().optional(),
+          }),
+        ),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    checkPin(data.pin);
+    const crypto = await import("crypto");
+    const sanitized = data.prizes.map((p) => ({
+      ...p,
+      id: p.id && p.id.trim() ? p.id.trim() : crypto.randomUUID(),
+      icon: p.icon || "gift",
+      daily_limit: Number(p.daily_limit) || 0,
+      date_quotas: p.date_quotas || {},
+      created_at: p.created_at || new Date().toISOString(),
+    }));
+    const db = await getLocalDatabase();
+    await db.writePrizes(sanitized);
+    return { ok: true, prizes: sanitized };
   });
 
 export const adminDeletePrize = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => adminAuth.extend({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) => adminAuth.extend({ id: z.string().min(1) }).parse(d))
   .handler(async ({ data }) => {
     checkPin(data.pin);
-    if (shouldUseSupabase()) {
-      try {
-        const supabase = await loadAdmin();
-        const { error } = await supabase.from("prizes").delete().eq("id", data.id);
-        if (!error) return { ok: true };
-      } catch (e) {
-        console.warn("[Supabase] Fallback to local DB on adminDeletePrize:", e);
-      }
-    } else {
-      const db = await getLocalDatabase();
-      const prizes = await db.readPrizes();
-      const filtered = prizes.filter((p: any) => p.id !== data.id);
-      await db.writePrizes(filtered);
-      return { ok: true };
-    }
+    const db = await getLocalDatabase();
+    const prizes = await db.readPrizes();
+    const filtered = prizes.filter((p: any) => p.id !== data.id);
+    await db.writePrizes(filtered);
+    return { ok: true, prizes: filtered };
   });
 
 export const adminDeleteParticipant = createServerFn({ method: "POST" })
