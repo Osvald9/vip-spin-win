@@ -2,17 +2,11 @@
   {
     "id": "11111111-1316-4000-8000-000000000001",
     "name": "Copo Amarelo",
-    "icon": "zap",
+    "icon": "robot",
     "total_quantity": 2000,
     "remaining_quantity": 2000,
-    "daily_limit": 500,
-    "date_quotas": {
-      "2026-08-13": 500,
-      "2026-08-14": 500,
-      "2026-08-15": 500,
-      "2026-08-16": 500
-    },
-    "weight": 73,
+    "daily_limit": 450,
+    "weight": 22,
     "active": true,
     "created_at": "2026-08-11T18:28:00.000Z"
   },
@@ -23,30 +17,18 @@
     "total_quantity": 300,
     "remaining_quantity": 300,
     "daily_limit": 75,
-    "date_quotas": {
-      "2026-08-13": 75,
-      "2026-08-14": 75,
-      "2026-08-15": 75,
-      "2026-08-16": 75
-    },
-    "weight": 11,
+    "weight": 10,
     "active": true,
     "created_at": "2026-08-11T18:28:00.000Z"
   },
   {
     "id": "33333333-1316-4000-8000-000000000003",
     "name": "Caneta",
-    "icon": "robot",
+    "icon": "zap",
     "total_quantity": 120,
     "remaining_quantity": 120,
     "daily_limit": 30,
-    "date_quotas": {
-      "2026-08-13": 30,
-      "2026-08-14": 30,
-      "2026-08-15": 30,
-      "2026-08-16": 30
-    },
-    "weight": 5,
+    "weight": 8,
     "active": true,
     "created_at": "2026-08-11T18:28:00.000Z"
   },
@@ -57,65 +39,96 @@
     "total_quantity": 97,
     "remaining_quantity": 97,
     "daily_limit": 25,
-    "date_quotas": {
-      "2026-08-13": 25,
-      "2026-08-14": 24,
-      "2026-08-15": 24,
-      "2026-08-16": 24
-    },
-    "weight": 4,
+    "weight": 8,
     "active": true,
     "created_at": "2026-08-11T18:28:00.000Z"
   },
   {
     "id": "55555555-1316-4000-8000-000000000005",
-    "name": "Copo Térmico",
+    "name": "Copo Térmico ( se for cliente, se não",
     "icon": "house",
     "total_quantity": 80,
     "remaining_quantity": 80,
     "daily_limit": 20,
-    "date_quotas": {
-      "2026-08-13": 20,
-      "2026-08-14": 20,
-      "2026-08-15": 20,
-      "2026-08-16": 20
-    },
-    "weight": 3,
+    "weight": 7,
     "active": true,
     "created_at": "2026-08-13T13:45:00.000Z"
   },
   {
     "id": "66666666-1316-4000-8000-000000000006",
     "name": "Boné",
-    "icon": "camera",
+    "icon": "robot",
     "total_quantity": 80,
     "remaining_quantity": 80,
     "daily_limit": 20,
-    "date_quotas": {
-      "2026-08-13": 20,
-      "2026-08-14": 20,
-      "2026-08-15": 20,
-      "2026-08-16": 20
-    },
-    "weight": 3,
+    "weight": 7,
     "active": true,
     "created_at": "2026-08-13T13:45:00.000Z"
   },
   {
     "id": "77777777-1316-4000-8000-000000000007",
-    "name": "1 Mês de Mensalidade Grátis",
-    "icon": "zap",
+    "name": "1 Mês de Mensalidade Grátis se for",
+    "icon": "robot",
     "total_quantity": 8,
     "remaining_quantity": 8,
     "daily_limit": 2,
-    "date_quotas": {
-      "2026-08-13": 2,
-      "2026-08-14": 2,
-      "2026-08-15": 2,
-      "2026-08-16": 2
-    },
-    "weight": 1,
+    "weight": 5,
     "active": true,
     "created_at": "2026-08-13T13:45:00.000Z"
+  },
+  {
+    "id": "88888888-1316-4000-8000-000000000008",
+    "name": "2 meses de upgrade temporario de",
+    "icon": "wifi",
+    "total_quantity": 6,
+    "remaining_quantity": 6,
+    "daily_limit": 2,
+    "weight": 5,
+    "active": true,
+    "created_at": "2026-08-14T14:45:00.000Z"
+  },
+  {
+    "id": "99999999-1316-4000-8000-000000000009",
+    "name": "1 aplicativo standart por 3 meses",
+    "icon": "house",
+    "total_quantity": 6,
+    "remaining_quantity": 6,
+    "daily_limit": 2,
+    "weight": 5,
+    "active": true,
+    "created_at": "2026-08-14T14:45:00.000Z"
+  },
+  {
+    "id": "aaaaaaaa-1316-4000-8000-000000000010",
+    "name": "1 aplicativo premium por 3 meses",
+    "icon": "house",
+    "total_quantity": 3,
+    "remaining_quantity": 3,
+    "daily_limit": 1,
+    "weight": 5,
+    "active": true,
+    "created_at": "2026-08-14T14:45:00.000Z"
+  },
+  {
+    "id": "bbbbbbbb-1316-4000-8000-000000000011",
+    "name": "MousePad",
+    "icon": "zap",
+    "total_quantity": 15,
+    "remaining_quantity": 15,
+    "daily_limit": 5,
+    "weight": 10,
+    "active": true,
+    "created_at": "2026-08-14T14:45:00.000Z"
+  },
+  {
+    "id": "cccccccc-1316-4000-8000-000000000012",
+    "name": "Kit CNX",
+    "icon": "heart",
+    "total_quantity": 50,
+    "remaining_quantity": 50,
+    "daily_limit": 15,
+    "weight": 10,
+    "active": true,
+    "created_at": "2026-08-14T14:45:00.000Z"
   }
 ]
