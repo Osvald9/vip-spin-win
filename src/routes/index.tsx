@@ -140,29 +140,29 @@ function Kiosk() {
 
   if (stage === "qr") {
     return (
-      <div className="min-h-screen w-full bg-white text-black flex flex-col justify-between">
+      <div className="min-h-screen w-full bg-white text-black flex flex-col items-center pt-1 pb-4">
         <TopBar />
 
-        <main className="mx-auto flex w-full max-w-2xl flex-col items-center px-4 pt-1 pb-2 text-center">
-          <div className="rounded-[2.5rem] border-[6px] border-black bg-white p-6 sm:p-8 w-full shadow-[10px_10px_0_0_#000] flex flex-col items-center">
-            <div className="inline-block rounded-full bg-yellow border-2 border-black px-5 py-1.5 text-xs sm:text-base font-black uppercase tracking-widest text-black mb-2">
+        <main className="mx-auto flex w-full max-w-2xl flex-col items-center px-4 pt-0 pb-2 text-center -mt-1">
+          <div className="rounded-[2.5rem] border-[6px] border-black bg-white p-5 sm:p-7 w-full shadow-[10px_10px_0_0_#000] flex flex-col items-center">
+            <div className="inline-block rounded-full bg-yellow border-2 border-black px-4 py-1 text-xs sm:text-sm font-black uppercase tracking-widest text-black mb-1.5">
               Ativação Stand Conexão VIP
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-black text-black leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-black leading-tight">
               Escaneie o QR Code
             </h1>
 
-            <p className="mt-1 text-base sm:text-lg font-bold text-black/70">
+            <p className="text-sm sm:text-base font-bold text-black/70">
               Aponte a câmera do seu celular para participar
             </p>
 
-            <div className="mt-4 w-full flex justify-center">
-              <div className="relative overflow-hidden rounded-3xl border-[5px] border-black bg-white p-4 sm:p-6 shadow-md w-full max-w-[480px]">
+            <div className="mt-3 w-full flex justify-center">
+              <div className="relative overflow-hidden rounded-3xl border-[5px] border-black bg-white p-3 sm:p-4 shadow-md w-full max-w-[440px]">
                 <img
                   src="/qr-code.jpeg"
                   alt="QR Code Ativação"
-                  className="w-full h-auto max-h-[500px] object-contain rounded-2xl mx-auto block"
+                  className="w-full h-auto max-h-[460px] object-contain rounded-2xl mx-auto block"
                 />
               </div>
             </div>
@@ -170,7 +170,7 @@ function Kiosk() {
             <button
               type="button"
               onClick={() => setStage("slot")}
-              className="btn-yellow btn-yellow-hover mt-6 w-full rounded-2xl py-6 sm:py-7 text-3xl sm:text-4xl font-black uppercase tracking-wider shadow-lg"
+              className="btn-yellow btn-yellow-hover mt-5 w-full rounded-2xl py-5 sm:py-6 text-2xl sm:text-3xl font-black uppercase tracking-wider shadow-lg"
               style={{ animation: "big-pulse 1.4s ease-in-out infinite" }}
             >
               PRÓXIMO ➔
@@ -186,7 +186,7 @@ function Kiosk() {
           title="Painel Administrativo"
         />
 
-        <footer className="py-2 text-center text-xs font-bold text-black/40">
+        <footer className="mt-auto py-2 text-center text-xs font-bold text-black/40">
           Conexão VIP · Todos os direitos reservados
         </footer>
       </div>
@@ -194,10 +194,10 @@ function Kiosk() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-white text-black flex flex-col justify-between">
+    <div className="min-h-screen w-full bg-white text-black flex flex-col items-center pt-1 pb-4">
       <TopBar />
 
-      <main className="mx-auto flex w-full max-w-4xl md:max-w-5xl flex-col items-center px-4 pt-1 pb-4">
+      <main className="mx-auto flex w-full max-w-4xl md:max-w-5xl flex-col items-center px-4 pt-0 pb-4 -mt-1">
         <SlotBoard
           spinning={spinning}
           finalIcons={finalIcons}
@@ -216,7 +216,7 @@ function Kiosk() {
         title="Painel Administrativo"
       />
 
-      <footer className="py-2 text-center text-xs font-bold text-black/40">
+      <footer className="mt-auto py-2 text-center text-xs font-bold text-black/40">
         Conexão VIP · Todos os direitos reservados
       </footer>
     </div>
@@ -225,8 +225,8 @@ function Kiosk() {
 
 function TopBar() {
   return (
-    <div className="flex justify-center items-center pt-2 pb-0">
-      <img src="/logo-cnx.png" alt="CNX Logo" className="h-16 sm:h-20 max-w-xs object-contain" />
+    <div className="flex justify-center items-center pt-1 pb-1">
+      <img src="/logo-cnx.png" alt="CNX Logo" className="h-14 sm:h-16 max-w-xs object-contain" />
     </div>
   );
 }
