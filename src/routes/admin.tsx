@@ -18,6 +18,7 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronUp,
+  Package,
 } from "lucide-react";
 
 import {
@@ -959,6 +960,29 @@ function NumberField({
       />
       {helper && <span className="text-[10px] text-muted-foreground">{helper}</span>}
     </label>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+  icon,
+}: {
+  label: string;
+  value: React.ReactNode;
+  hint?: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-xs">
+      <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-2 text-2xl font-black">{value}</div>
+      {hint && <div className="mt-0.5 text-xs text-muted-foreground">{hint}</div>}
+    </div>
   );
 }
 
